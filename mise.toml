@@ -1,5 +1,6 @@
 [tools]
 ruby = "3.2"
+rust = "1.92"
 
 [env]
 _.path = ["bin", "exe"]
