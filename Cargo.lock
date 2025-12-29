@@ -419,6 +419,7 @@ dependencies = [
 name = "icu4x"
 version = "0.1.0"
 dependencies = [
+ "fixed_decimal",
  "icu",
  "icu_locale",
  "icu_provider",

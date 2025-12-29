@@ -15,7 +15,7 @@ use std::path::PathBuf;
 /// 3. We never share the provider across threads in Rust code
 #[magnus::wrap(class = "ICU4X::DataProvider", free_immediately, size)]
 pub struct DataProvider {
-    inner: RefCell<Option<BlobDataProvider>>,
+    pub(crate) inner: RefCell<Option<BlobDataProvider>>,
 }
 
 // SAFETY: Ruby's GVL protects access to this type. The BlobDataProvider is only

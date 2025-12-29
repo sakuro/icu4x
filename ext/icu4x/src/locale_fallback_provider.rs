@@ -17,8 +17,7 @@ use magnus::{function, prelude::*, Error, RHash, RModule, Ruby, Symbol, TryConve
 /// 3. We never share the provider across threads in Rust code
 #[magnus::wrap(class = "ICU4X::LocaleFallbackProvider", free_immediately, size)]
 pub struct LocaleFallbackProvider {
-    #[allow(dead_code)]
-    inner: IcuLocaleFallbackProvider<BlobDataProvider>,
+    pub(crate) inner: IcuLocaleFallbackProvider<BlobDataProvider>,
 }
 
 // SAFETY: Ruby's GVL protects access to this type. The provider is only

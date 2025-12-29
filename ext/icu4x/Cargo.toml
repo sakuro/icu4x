@@ -17,3 +17,4 @@ icu_provider_export = "2.1"
 icu_provider_registry = "2.1"
 icu_provider_adapters = "2.1"
 icu = { version = "2.1", features = ["experimental"] }
+fixed_decimal = "0.7"

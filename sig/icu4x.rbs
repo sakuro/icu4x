@@ -39,4 +39,15 @@ module ICU4X
     def eql?: (Locale other) -> bool
     def hash: () -> Integer
   end
+
+  type plural_category = :zero | :one | :two | :few | :many | :other
+  type plural_rule_type = :cardinal | :ordinal
+
+  class PluralRules
+    def self.new: (Locale locale, provider: DataProvider | LocaleFallbackProvider, ?type: plural_rule_type) -> PluralRules
+
+    def select: (Integer | Float number) -> plural_category
+    def categories: () -> Array[plural_category]
+    def resolved_options: () -> { locale: String, type: plural_rule_type }
+  end
 end

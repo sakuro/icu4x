@@ -5,7 +5,7 @@ use std::cell::RefCell;
 /// Ruby wrapper for ICU4X Locale
 #[magnus::wrap(class = "ICU4X::Locale", free_immediately, size)]
 pub struct Locale {
-    inner: RefCell<IcuLocale>,
+    pub(crate) inner: RefCell<IcuLocale>,
 }
 
 impl Locale {

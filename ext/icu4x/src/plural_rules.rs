@@ -1,0 +1,238 @@
+use crate::data_provider::DataProvider;
+use crate::locale::Locale;
+use crate::locale_fallback_provider::LocaleFallbackProvider;
+use fixed_decimal::Decimal;
+use icu::plurals::{PluralCategory, PluralRuleType, PluralRules as IcuPluralRules, PluralRulesPreferences};
+use icu_provider::buf::AsDeserializingBufferProvider;
+use magnus::{
+    function, method, prelude::*, Error, ExceptionClass, RArray, RHash, RModule, Ruby, Symbol,
+    TryConvert, Value,
+};
+
+/// Ruby wrapper for ICU4X PluralRules
+#[magnus::wrap(class = "ICU4X::PluralRules", free_immediately, size)]
+pub struct PluralRules {
+    inner: IcuPluralRules,
+    locale_str: String,
+    rule_type: PluralRuleType,
+}
+
+// SAFETY: Ruby's GVL protects access to this type.
+unsafe impl Send for PluralRules {}
+
+impl PluralRules {
+    /// Create a new PluralRules instance
+    ///
+    /// # Arguments
+    /// * `locale` - A Locale instance
+    /// * `provider:` - A DataProvider or LocaleFallbackProvider instance
+    /// * `type:` - :cardinal (default) or :ordinal
+    fn new(ruby: &Ruby, args: &[Value]) -> Result<Self, Error> {
+        // Parse arguments: (locale, **kwargs)
+        if args.is_empty() {
+            return Err(Error::new(
+                ruby.exception_arg_error(),
+                "wrong number of arguments (given 0, expected 1+)",
+            ));
+        }
+
+        // Get the locale
+        let locale: &Locale = TryConvert::try_convert(args[0])?;
+        let locale_ref = locale.inner.borrow();
+        let locale_str = locale_ref.to_string();
+        // Clone the locale before dropping the borrow
+        let icu_locale = locale_ref.clone();
+        drop(locale_ref);
+
+        // Convert to PluralRulesPreferences
+        let prefs: PluralRulesPreferences = (&icu_locale).into();
+
+        // Get kwargs
+        let kwargs: RHash = if args.len() > 1 {
+            TryConvert::try_convert(args[1])?
+        } else {
+            return Err(Error::new(
+                ruby.exception_arg_error(),
+                "missing keyword: :provider",
+            ));
+        };
+
+        // Extract provider (required)
+        let provider_value: Value = kwargs
+            .lookup::<_, Option<Value>>(ruby.to_symbol("provider"))?
+            .ok_or_else(|| Error::new(ruby.exception_arg_error(), "missing keyword: :provider"))?;
+
+        // Extract type option (default: :cardinal)
+        let type_value: Option<Symbol> = kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("type"))?;
+        let cardinal_sym = ruby.to_symbol("cardinal");
+        let ordinal_sym = ruby.to_symbol("ordinal");
+        let type_sym = type_value.unwrap_or(cardinal_sym);
+
+        let rule_type = if type_sym.equal(cardinal_sym)? {
+            PluralRuleType::Cardinal
+        } else if type_sym.equal(ordinal_sym)? {
+            PluralRuleType::Ordinal
+        } else {
+            return Err(Error::new(
+                ruby.exception_arg_error(),
+                "type must be :cardinal or :ordinal",
+            ));
+        };
+
+        // Get the error exception class
+        let error_class: ExceptionClass = ruby
+            .eval("ICU4X::Error")
+            .unwrap_or_else(|_| ruby.exception_runtime_error());
+
+        // Try to create PluralRules from DataProvider
+        if let Ok(dp) = <&DataProvider>::try_convert(provider_value) {
+            let inner_ref = dp.inner.borrow();
+            if let Some(ref blob_provider) = *inner_ref {
+                let rules = match rule_type {
+                    PluralRuleType::Cardinal => IcuPluralRules::try_new_cardinal_unstable(
+                        &blob_provider.as_deserializing(),
+                        prefs,
+                    ),
+                    PluralRuleType::Ordinal => IcuPluralRules::try_new_ordinal_unstable(
+                        &blob_provider.as_deserializing(),
+                        prefs,
+                    ),
+                    _ => IcuPluralRules::try_new_cardinal_unstable(
+                        &blob_provider.as_deserializing(),
+                        prefs,
+                    ),
+                }
+                .map_err(|e| Error::new(error_class, format!("Failed to create PluralRules: {}", e)))?;
+
+                return Ok(Self {
+                    inner: rules,
+                    locale_str,
+                    rule_type,
+                });
+            } else {
+                return Err(Error::new(
+                    ruby.exception_arg_error(),
+                    "DataProvider has already been consumed",
+                ));
+            }
+        }
+
+        // Try to create PluralRules from LocaleFallbackProvider
+        if let Ok(lfp) = <&LocaleFallbackProvider>::try_convert(provider_value) {
+            let rules = match rule_type {
+                PluralRuleType::Cardinal => IcuPluralRules::try_new_cardinal_unstable(
+                    &lfp.inner.as_deserializing(),
+                    prefs,
+                ),
+                PluralRuleType::Ordinal => IcuPluralRules::try_new_ordinal_unstable(
+                    &lfp.inner.as_deserializing(),
+                    prefs,
+                ),
+                _ => IcuPluralRules::try_new_cardinal_unstable(
+                    &lfp.inner.as_deserializing(),
+                    prefs,
+                ),
+            }
+            .map_err(|e| Error::new(error_class, format!("Failed to create PluralRules: {}", e)))?;
+
+            return Ok(Self {
+                inner: rules,
+                locale_str,
+                rule_type,
+            });
+        }
+
+        Err(Error::new(
+            ruby.exception_type_error(),
+            "provider must be a DataProvider or LocaleFallbackProvider",
+        ))
+    }
+
+    /// Determine the plural category for a number
+    ///
+    /// # Arguments
+    /// * `number` - An integer or float
+    ///
+    /// # Returns
+    /// A symbol: :zero, :one, :two, :few, :many, or :other
+    fn select(&self, number: Value) -> Result<Symbol, Error> {
+        let ruby = Ruby::get().expect("Ruby runtime should be available");
+
+        // Check if it's a Float first (before Integer, since i64::try_convert
+        // on Float uses to_int which truncates the decimal part)
+        let category = if number.is_kind_of(ruby.class_float()) {
+            let f: f64 = TryConvert::try_convert(number)?;
+            // For floats, convert to Decimal to preserve fractional digits
+            let s = format!("{}", f);
+            if let Ok(fd) = s.parse::<Decimal>() {
+                self.inner.category_for(&fd)
+            } else {
+                return Err(Error::new(
+                    ruby.exception_arg_error(),
+                    format!("Failed to convert {} to Decimal", f),
+                ));
+            }
+        } else if number.is_kind_of(ruby.class_integer()) {
+            let n: i64 = TryConvert::try_convert(number)?;
+            self.inner.category_for(n as usize)
+        } else {
+            return Err(Error::new(
+                ruby.exception_type_error(),
+                "number must be an Integer or Float",
+            ));
+        };
+
+        Ok(Self::category_to_symbol(&ruby, category))
+    }
+
+    /// Get the list of plural categories for this locale
+    ///
+    /// # Returns
+    /// An array of symbols representing available categories
+    fn categories(&self) -> RArray {
+        let ruby = Ruby::get().expect("Ruby runtime should be available");
+        let array = ruby.ary_new();
+        for category in self.inner.categories() {
+            let _ = array.push(Self::category_to_symbol(&ruby, category));
+        }
+        array
+    }
+
+    /// Get the resolved options
+    ///
+    /// # Returns
+    /// A hash with :locale and :type keys
+    fn resolved_options(&self) -> Result<RHash, Error> {
+        let ruby = Ruby::get().expect("Ruby runtime should be available");
+        let hash = ruby.hash_new();
+        hash.aset(ruby.to_symbol("locale"), self.locale_str.as_str())?;
+        let type_sym = match self.rule_type {
+            PluralRuleType::Cardinal => ruby.to_symbol("cardinal"),
+            PluralRuleType::Ordinal => ruby.to_symbol("ordinal"),
+            _ => ruby.to_symbol("cardinal"),
+        };
+        hash.aset(ruby.to_symbol("type"), type_sym)?;
+        Ok(hash)
+    }
+
+    /// Convert ICU4X PluralCategory to Ruby Symbol
+    fn category_to_symbol(ruby: &Ruby, category: PluralCategory) -> Symbol {
+        match category {
+            PluralCategory::Zero => ruby.to_symbol("zero"),
+            PluralCategory::One => ruby.to_symbol("one"),
+            PluralCategory::Two => ruby.to_symbol("two"),
+            PluralCategory::Few => ruby.to_symbol("few"),
+            PluralCategory::Many => ruby.to_symbol("many"),
+            PluralCategory::Other => ruby.to_symbol("other"),
+        }
+    }
+}
+
+pub fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
+    let class = module.define_class("PluralRules", ruby.class_object())?;
+    class.define_singleton_method("new", function!(PluralRules::new, -1))?;
+    class.define_method("select", method!(PluralRules::select, 1))?;
+    class.define_method("categories", method!(PluralRules::categories, 0))?;
+    class.define_method("resolved_options", method!(PluralRules::resolved_options, 0))?;
+    Ok(())
+}
