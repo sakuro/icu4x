@@ -48,11 +48,31 @@ module ICU4X
   end
 
   type number_format_style = :decimal | :percent | :currency
+  type rounding_mode = :ceil | :floor | :expand | :trunc | :half_ceil | :half_floor | :half_expand | :half_trunc | :half_even
 
   class NumberFormat
-    def self.new: (Locale locale, provider: DataProvider, ?style: number_format_style, ?currency: String, ?use_grouping: bool) -> NumberFormat
+    def self.new: (
+      Locale locale,
+      provider: DataProvider,
+      ?style: number_format_style,
+      ?currency: String,
+      ?use_grouping: bool,
+      ?minimum_integer_digits: Integer,
+      ?minimum_fraction_digits: Integer,
+      ?maximum_fraction_digits: Integer,
+      ?rounding_mode: rounding_mode
+    ) -> NumberFormat
 
     def format: (Integer | Float | BigDecimal number) -> String
-    def resolved_options: () -> { locale: String, style: number_format_style, use_grouping: bool, ?currency: String }
+    def resolved_options: () -> {
+      locale: String,
+      style: number_format_style,
+      use_grouping: bool,
+      ?currency: String,
+      ?minimum_integer_digits: Integer,
+      ?minimum_fraction_digits: Integer,
+      ?maximum_fraction_digits: Integer,
+      ?rounding_mode: rounding_mode
+    }
   end
 end

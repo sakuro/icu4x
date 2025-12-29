@@ -2,7 +2,7 @@
 
 Number formatting functionality. Equivalent to JavaScript Intl.NumberFormat.
 
-**Status**: Future implementation
+**Status**: Implemented
 
 ---
 
@@ -30,21 +30,23 @@ module ICU4X
     # @param provider [DataProvider] Data provider
     # @param style [Symbol] :decimal, :currency, :percent
     # @param currency [String, nil] Currency code (required when style: :currency)
+    # @param use_grouping [Boolean] Use grouping separators (default: true)
     # @param minimum_integer_digits [Integer, nil] Minimum integer digits
     # @param minimum_fraction_digits [Integer, nil] Minimum fraction digits
     # @param maximum_fraction_digits [Integer, nil] Maximum fraction digits
-    # @param use_grouping [Boolean] Use grouping separators (default: true)
+    # @param rounding_mode [Symbol] Rounding mode (default: :half_expand)
     # @raise [Error] If options are invalid
     def initialize(locale, provider:, style: :decimal, currency: nil,
+                   use_grouping: true,
                    minimum_integer_digits: nil, minimum_fraction_digits: nil,
-                   maximum_fraction_digits: nil, use_grouping: true) = ...
+                   maximum_fraction_digits: nil, rounding_mode: :half_expand) = ...
 
     # Format
     # @param number [Numeric] Target to format (Integer, Float, BigDecimal)
     # @return [String]
     def format(number) = ...
 
-    # Format to parts
+    # Format to parts (Future implementation)
     # @param number [Numeric] Target to format
     # @return [Array<FormattedPart>]
     def format_to_parts(number) = ...
@@ -91,11 +93,38 @@ nf = ICU4X::NumberFormat.new(
 )
 ```
 
+#### rounding_mode
+
+Rounding mode used with `maximum_fraction_digits`. Default is `:half_expand` (same as Intl.NumberFormat).
+
+| Value | Description | Example (0 digits) |
+|-------|-------------|-------------------|
+| `:half_expand` | Round half away from zero (default) | 2.5 → 3, -2.5 → -3 |
+| `:half_even` | Round half to even (banker's rounding) | 2.5 → 2, 3.5 → 4 |
+| `:half_trunc` | Round half toward zero | 2.5 → 2, -2.5 → -2 |
+| `:half_ceil` | Round half toward +∞ | 2.5 → 3, -2.5 → -2 |
+| `:half_floor` | Round half toward -∞ | 2.5 → 2, -2.5 → -3 |
+| `:ceil` | Round toward +∞ | 2.1 → 3, -2.9 → -2 |
+| `:floor` | Round toward -∞ | 2.9 → 2, -2.1 → -3 |
+| `:expand` | Round away from zero | 2.1 → 3, -2.1 → -3 |
+| `:trunc` | Round toward zero | 2.9 → 2, -2.9 → -2 |
+
+```ruby
+nf = ICU4X::NumberFormat.new(
+  locale,
+  provider: provider,
+  maximum_fraction_digits: 0,
+  rounding_mode: :half_even
+)
+nf.format(2.5)  # => "2"
+nf.format(3.5)  # => "4"
+```
+
 ---
 
-## ICU4X::NumberFormat::FormattedPart
+## ICU4X::NumberFormat::FormattedPart (Future)
 
-A Data class representing parts of the formatted result.
+A Data class representing parts of the formatted result. For use with `format_to_parts`.
 
 ```ruby
 module ICU4X
@@ -162,11 +191,13 @@ nf = ICU4X::NumberFormat.new(
   style: :percent
 )
 
-nf.format(0.1234)
-# => "12%"
+nf.format(25)
+# => "25%"
 ```
 
-### Formatting to Parts
+Note: Unlike JavaScript's Intl.NumberFormat, this does not multiply by 100. Pass the value as-is.
+
+### Formatting to Parts (Future)
 
 ```ruby
 nf = ICU4X::NumberFormat.new(
@@ -201,14 +232,15 @@ nf.format(BigDecimal("12345678901234567890.123456789"))
 
 ## Rust Extension
 
-When implemented, will be added to `ext/icu4x/src/`.
+Implementation: `ext/icu4x/src/number_format.rs`
 
 ### Dependent Crates
 
 ```toml
 [dependencies]
-icu_decimal = "2.0"
-fixed_decimal = "0.5"
+icu = { version = "2.1", features = ["experimental"] }
+fixed_decimal = "0.7"
+tinystr = "0.8"
 ```
 
 ### Rust Module Structure

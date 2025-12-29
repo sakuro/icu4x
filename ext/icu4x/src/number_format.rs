@@ -1,6 +1,6 @@
 use crate::data_provider::DataProvider;
 use crate::locale::Locale;
-use fixed_decimal::Decimal;
+use fixed_decimal::{Decimal, SignedRoundingMode, UnsignedRoundingMode};
 use icu::decimal::options::{DecimalFormatterOptions, GroupingStrategy};
 use icu::decimal::{DecimalFormatter, DecimalFormatterPreferences};
 use icu::experimental::dimension::currency::formatter::{
@@ -27,6 +27,55 @@ enum Style {
     Currency,
 }
 
+/// Rounding mode for number formatting
+#[derive(Clone, Copy, PartialEq, Eq, Default)]
+enum RoundingMode {
+    Ceil,
+    Floor,
+    Expand,
+    Trunc,
+    HalfCeil,
+    HalfFloor,
+    #[default]
+    HalfExpand,
+    HalfTrunc,
+    HalfEven,
+}
+
+impl RoundingMode {
+    fn to_signed_rounding_mode(self) -> SignedRoundingMode {
+        match self {
+            RoundingMode::Ceil => SignedRoundingMode::Ceil,
+            RoundingMode::Floor => SignedRoundingMode::Floor,
+            RoundingMode::Expand => SignedRoundingMode::Unsigned(UnsignedRoundingMode::Expand),
+            RoundingMode::Trunc => SignedRoundingMode::Unsigned(UnsignedRoundingMode::Trunc),
+            RoundingMode::HalfCeil => SignedRoundingMode::HalfCeil,
+            RoundingMode::HalfFloor => SignedRoundingMode::HalfFloor,
+            RoundingMode::HalfExpand => {
+                SignedRoundingMode::Unsigned(UnsignedRoundingMode::HalfExpand)
+            }
+            RoundingMode::HalfTrunc => {
+                SignedRoundingMode::Unsigned(UnsignedRoundingMode::HalfTrunc)
+            }
+            RoundingMode::HalfEven => SignedRoundingMode::Unsigned(UnsignedRoundingMode::HalfEven),
+        }
+    }
+
+    fn to_symbol_name(self) -> &'static str {
+        match self {
+            RoundingMode::Ceil => "ceil",
+            RoundingMode::Floor => "floor",
+            RoundingMode::Expand => "expand",
+            RoundingMode::Trunc => "trunc",
+            RoundingMode::HalfCeil => "half_ceil",
+            RoundingMode::HalfFloor => "half_floor",
+            RoundingMode::HalfExpand => "half_expand",
+            RoundingMode::HalfTrunc => "half_trunc",
+            RoundingMode::HalfEven => "half_even",
+        }
+    }
+}
+
 /// Internal formatter storage
 enum FormatterKind {
     Decimal(DecimalFormatter),
@@ -42,6 +91,10 @@ pub struct NumberFormat {
     style: Style,
     use_grouping: bool,
     currency_code: Option<String>,
+    minimum_integer_digits: Option<i16>,
+    minimum_fraction_digits: Option<i16>,
+    maximum_fraction_digits: Option<i16>,
+    rounding_mode: RoundingMode,
 }
 
 // SAFETY: Ruby's GVL protects access to this type.
@@ -124,6 +177,17 @@ impl NumberFormat {
             .lookup::<_, Option<bool>>(ruby.to_symbol("use_grouping"))?
             .unwrap_or(true);
 
+        // Extract digit options
+        let minimum_integer_digits: Option<i16> =
+            Self::extract_digit_option(ruby, &kwargs, "minimum_integer_digits")?;
+        let minimum_fraction_digits: Option<i16> =
+            Self::extract_digit_option(ruby, &kwargs, "minimum_fraction_digits")?;
+        let maximum_fraction_digits: Option<i16> =
+            Self::extract_digit_option(ruby, &kwargs, "maximum_fraction_digits")?;
+
+        // Extract rounding_mode option (default: :half_expand)
+        let rounding_mode = Self::extract_rounding_mode(ruby, &kwargs)?;
+
         // Get the error exception class
         let error_class: ExceptionClass = ruby
             .eval("ICU4X::Error")
@@ -201,20 +265,98 @@ impl NumberFormat {
             style,
             use_grouping,
             currency_code: currency_str,
+            minimum_integer_digits,
+            minimum_fraction_digits,
+            maximum_fraction_digits,
+            rounding_mode,
         })
+    }
+
+    /// Extract rounding_mode option from kwargs
+    fn extract_rounding_mode(ruby: &Ruby, kwargs: &RHash) -> Result<RoundingMode, Error> {
+        let mode_sym: Option<Symbol> =
+            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("rounding_mode"))?;
+
+        let Some(sym) = mode_sym else {
+            return Ok(RoundingMode::default());
+        };
+
+        let ceil = ruby.to_symbol("ceil");
+        let floor = ruby.to_symbol("floor");
+        let expand = ruby.to_symbol("expand");
+        let trunc = ruby.to_symbol("trunc");
+        let half_ceil = ruby.to_symbol("half_ceil");
+        let half_floor = ruby.to_symbol("half_floor");
+        let half_expand = ruby.to_symbol("half_expand");
+        let half_trunc = ruby.to_symbol("half_trunc");
+        let half_even = ruby.to_symbol("half_even");
+
+        if sym.equal(ceil)? {
+            Ok(RoundingMode::Ceil)
+        } else if sym.equal(floor)? {
+            Ok(RoundingMode::Floor)
+        } else if sym.equal(expand)? {
+            Ok(RoundingMode::Expand)
+        } else if sym.equal(trunc)? {
+            Ok(RoundingMode::Trunc)
+        } else if sym.equal(half_ceil)? {
+            Ok(RoundingMode::HalfCeil)
+        } else if sym.equal(half_floor)? {
+            Ok(RoundingMode::HalfFloor)
+        } else if sym.equal(half_expand)? {
+            Ok(RoundingMode::HalfExpand)
+        } else if sym.equal(half_trunc)? {
+            Ok(RoundingMode::HalfTrunc)
+        } else if sym.equal(half_even)? {
+            Ok(RoundingMode::HalfEven)
+        } else {
+            Err(Error::new(
+                ruby.exception_arg_error(),
+                "rounding_mode must be :ceil, :floor, :expand, :trunc, :half_ceil, :half_floor, :half_expand, :half_trunc, or :half_even",
+            ))
+        }
+    }
+
+    /// Extract a digit option from kwargs with validation
+    fn extract_digit_option(ruby: &Ruby, kwargs: &RHash, name: &str) -> Result<Option<i16>, Error> {
+        let value: Option<i64> = kwargs.lookup::<_, Option<i64>>(ruby.to_symbol(name))?;
+        match value {
+            Some(v) if v < 0 => Err(Error::new(
+                ruby.exception_arg_error(),
+                format!("{} must be non-negative", name),
+            )),
+            Some(v) if v > i16::MAX as i64 => Err(Error::new(
+                ruby.exception_arg_error(),
+                format!("{} is too large (max {})", name, i16::MAX),
+            )),
+            Some(v) => Ok(Some(v as i16)),
+            None => Ok(None),
+        }
     }
 
     /// Format a number
     ///
     /// # Arguments
-    /// * `number` - An integer or float
+    /// * `number` - An integer, float, or BigDecimal
     ///
     /// # Returns
     /// A formatted string
     fn format(&self, number: Value) -> Result<String, Error> {
         let ruby = Ruby::get().expect("Ruby runtime should be available");
 
-        let decimal = Self::convert_to_decimal(&ruby, number)?;
+        let mut decimal = Self::convert_to_decimal(&ruby, number)?;
+
+        // Apply digit options (order matters: round first, then pad)
+        if let Some(max) = self.maximum_fraction_digits {
+            decimal.round_with_mode(-max, self.rounding_mode.to_signed_rounding_mode());
+        }
+        if let Some(min) = self.minimum_fraction_digits {
+            decimal.pad_end(-min);
+        }
+        if let Some(min) = self.minimum_integer_digits {
+            decimal.pad_start(min);
+        }
+
         let formatted = match &self.inner {
             FormatterKind::Decimal(formatter) => formatter.format(&decimal).to_string(),
             FormatterKind::Percent(formatter) => formatter.format(&decimal).to_string(),
@@ -273,7 +415,7 @@ impl NumberFormat {
     /// Get the resolved options
     ///
     /// # Returns
-    /// A hash with :locale, :style, :use_grouping, and optionally :currency keys
+    /// A hash with :locale, :style, :use_grouping, and optionally :currency and digit options
     fn resolved_options(&self) -> Result<RHash, Error> {
         let ruby = Ruby::get().expect("Ruby runtime should be available");
         let hash = ruby.hash_new();
@@ -287,6 +429,19 @@ impl NumberFormat {
         hash.aset(ruby.to_symbol("use_grouping"), self.use_grouping)?;
         if let Some(ref currency) = self.currency_code {
             hash.aset(ruby.to_symbol("currency"), currency.as_str())?;
+        }
+        if let Some(v) = self.minimum_integer_digits {
+            hash.aset(ruby.to_symbol("minimum_integer_digits"), v)?;
+        }
+        if let Some(v) = self.minimum_fraction_digits {
+            hash.aset(ruby.to_symbol("minimum_fraction_digits"), v)?;
+        }
+        if let Some(v) = self.maximum_fraction_digits {
+            hash.aset(ruby.to_symbol("maximum_fraction_digits"), v)?;
+            hash.aset(
+                ruby.to_symbol("rounding_mode"),
+                ruby.to_symbol(self.rounding_mode.to_symbol_name()),
+            )?;
         }
         Ok(hash)
     }
