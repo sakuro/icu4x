@@ -1,0 +1,19 @@
+[package]
+name = "icu4x"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+magnus = "0.8"
+icu_locale = "2.1"
+icu_provider = "2.1"
+icu_provider_blob = { version = "2.1", features = ["alloc", "export"] }
+icu_provider_source = { version = "2.1", features = ["networking", "experimental"] }
+icu_provider_export = "2.1"
+icu_provider_registry = "2.1"
+icu_provider_adapters = "2.1"
+icu = { version = "2.1", features = ["experimental"] }
