@@ -2,7 +2,7 @@
 
 Date/time formatting functionality. Equivalent to JavaScript Intl.DateTimeFormat.
 
-**Status**: Future implementation
+**Status**: Implemented (format_to_parts pending)
 
 ---
 
@@ -163,9 +163,8 @@ When implemented, will be added to `ext/icu4x/src/`.
 
 ```toml
 [dependencies]
-icu_datetime = "2.0"
-icu_calendar = "2.0"
-icu_timezone = "2.0"
+icu = { version = "2.1", features = ["experimental"] }
+jiff = "0.2"  # For timezone offset calculation
 ```
 
 ### Rust Module Structure
@@ -189,9 +188,10 @@ $ icu4x-datagen --locales en,ja --markers datetime --format blob --output spec/f
 
 ## Design Notes
 
-- Completed on ICU4X side without depending on Ruby's `Time` / `Date`
-- Timezone conversion is handled by ICU4X
+- Completed on Rust side without depending on Ruby's `Time` / `Date`
+- Timezone conversion uses jiff crate (ICU4X's internal mechanism was deprecated)
 - Calendar initially supports Gregorian only; `calendar:` option is for future expansion
+- Ruby Time objects are converted to UTC, then to local time via jiff, then formatted with ICU4X
 
 ---
 
@@ -201,7 +201,7 @@ $ icu4x-datagen --locales en,ja --markers datetime --format blob --output spec/f
 
 | Calendar | Status | Notes |
 |----------|--------|-------|
-| `:gregory` | Planned | Gregorian calendar (default) |
+| `:gregory` | Implemented | Gregorian calendar (default) |
 | `:japanese` | Future | Japanese calendar (Reiwa, Heisei, etc.) |
 | Others | Future consideration | Buddhist, Hijri, etc. |
 
@@ -237,55 +237,41 @@ When calendar functionality is expanded, users need to:
 
 ## Timezone Management
 
-### Policy: Full Delegation to ICU4X
+### Implementation: jiff crate for UTC offset calculation
 
-Timezone processing is completed on the ICU4X side. The Ruby tzinfo gem is not used.
-
-### ICU4X Timezone Features
-
-ICU4X includes data derived from the IANA Time Zone Database:
-
-| Component | Role |
-|-----------|------|
-| `TimeZoneIdMapper` | IANA → BCP-47 conversion (e.g., "Asia/Tokyo" → "jptyo") |
-| `MetazoneCalculator` | Metazone calculation based on date/time |
-| `CustomTimeZone` | Holds offset, ID, metazone, and daylight saving time |
-
-**Note**: ICU4X uses BCP-47 format internally. The Ruby API accepts IANA format and converts on the Rust side.
+Timezone offset calculation uses the [jiff](https://crates.io/crates/jiff) crate instead of ICU4X's internal mechanisms. ICU4X's `VariantOffsetsCalculator` was deprecated in version 2.1.0 as "a bad approximation of a time zone database."
 
 ### Processing Flow
 
 ```
-Ruby side                        Rust side (ICU4X)
+Ruby side                        Rust side
 ─────────────────────────────────────────────────────────
-time_zone: "Asia/Tokyo"    →    Convert to BCP-47 via TimeZoneIdMapper
-                           →    Get timezone data from DataProvider
-                           →    Calculate metazone via MetazoneCalculator
-                           →    Execute formatting
+time_zone: "Asia/Tokyo"    →    Validate via ICU4X IanaParser
+                           →    Create jiff::tz::TimeZone
+Time.utc(...)              →    Get Unix timestamp from Ruby Time
+                           →    Convert to jiff::Timestamp
+                           →    Apply timezone offset via jiff
+                           →    Format local datetime with ICU4X
                            ←    Return result string
 ```
 
-### Timezone Data in DataGenerator
+### Components Used
 
-When using timezone functionality, the following markers are required in DataGenerator:
+| Component | Role |
+|-----------|------|
+| `icu::time::zone::IanaParser` | Validate IANA timezone names |
+| `jiff::tz::TimeZone` | Timezone with IANA Time Zone Database |
+| `jiff::Timestamp` | UTC timestamp for offset calculation |
+| `icu::datetime::DateTimeFormatter` | Locale-aware formatting |
 
-```ruby
-ICU4X::DataGenerator.export(
-  locales: %w[ja en],
-  markers: [:datetime],  # Includes timezone data
-  format: :blob,
-  output: Pathname.new("data/i18n.blob")
-)
-```
+### Rationale for using jiff
 
-### Rationale
-
-| Perspective | ICU4X Delegation | Using tzinfo |
-|-------------|------------------|--------------|
-| Dependencies | No additional gem needed | tzinfo required |
-| Consistency | Single data source | Inconsistency risk |
-| Performance | Completed on Rust side | Ruby/Rust data transfer |
-| Compatibility | Same as JavaScript Intl | Custom approach |
+| Perspective | jiff crate | ICU4X internal | tzinfo gem |
+|-------------|------------|----------------|------------|
+| Accuracy | Full IANA database | Deprecated/approximate | Full IANA database |
+| Dependencies | Rust crate only | N/A | Ruby gem required |
+| Performance | All in Rust | N/A | Ruby/Rust transfer |
+| Maintenance | Actively maintained | Deprecated | Actively maintained |
 
 ---
 

@@ -39,3 +39,4 @@ inherit_from: .rubocop_todo.yml
 RSpec/SpecFilePathFormat:
   CustomTransform:
     ICU4X: icu4x
+    DateTimeFormat: datetime_format

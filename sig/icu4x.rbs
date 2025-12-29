@@ -50,6 +50,9 @@ module ICU4X
   type number_format_style = :decimal | :percent | :currency
   type rounding_mode = :ceil | :floor | :expand | :trunc | :half_ceil | :half_floor | :half_expand | :half_trunc | :half_even
 
+  type date_style = :full | :long | :medium | :short
+  type time_style = :full | :long | :medium | :short
+
   class NumberFormat
     def self.new: (
       Locale locale,
@@ -73,6 +76,26 @@ module ICU4X
       ?minimum_fraction_digits: Integer,
       ?maximum_fraction_digits: Integer,
       ?rounding_mode: rounding_mode
+    }
+  end
+
+  class DateTimeFormat
+    def self.new: (
+      Locale locale,
+      provider: DataProvider,
+      ?date_style: date_style,
+      ?time_style: time_style,
+      ?time_zone: String,
+      ?calendar: Symbol
+    ) -> DateTimeFormat
+
+    def format: (Time time) -> String
+    def resolved_options: () -> {
+      locale: String,
+      calendar: Symbol,
+      ?date_style: date_style,
+      ?time_style: time_style,
+      ?time_zone: String
     }
   end
 end

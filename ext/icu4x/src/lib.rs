@@ -1,5 +1,6 @@
 mod data_generator;
 mod data_provider;
+mod datetime_format;
 mod locale;
 mod number_format;
 mod plural_rules;
@@ -15,6 +16,7 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     data_generator::init(ruby, &module)?;
     plural_rules::init(ruby, &module)?;
     number_format::init(ruby, &module)?;
+    datetime_format::init(ruby, &module)?;
 
     Ok(())
 }

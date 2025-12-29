@@ -19,3 +19,4 @@ icu_provider_adapters = "2.1"
 icu = { version = "2.1", features = ["experimental"] }
 fixed_decimal = "0.7"
 tinystr = "0.8"
+jiff = "0.2"

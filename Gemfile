@@ -36,4 +36,7 @@ group :test do
   # RSpec & SimpleCov
   gem "rspec", require: false
   gem "simplecov", require: false
+
+  # Time manipulation
+  gem "timecop", require: false
 end
