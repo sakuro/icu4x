@@ -35,7 +35,7 @@ inherit_gem:
 
 inherit_from: .rubocop_todo.yml
 
-# Project-specific settings can be added here
-# Example:
-# Style/Documentation:
-#   Enabled: false
+# Project-specific settings
+RSpec/SpecFilePathFormat:
+  CustomTransform:
+    ICU4X: icu4x

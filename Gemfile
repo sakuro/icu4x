@@ -6,6 +6,7 @@ gemspec
 
 group :development, :test do
   gem "rake", require: false
+  gem "rake-compiler", require: false
 
   gem "irb", require: false
   gem "repl_type_completor", require: false
@@ -28,7 +29,7 @@ group :development do
 
   # YARD
   gem "redcarpet", require: false
-  gem "yard", github: "lsegal/yard", require: false # Version with Data.define support
+  gem "yard", require: false
 end
 
 group :test do
