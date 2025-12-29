@@ -1,5 +1,5 @@
 use icu_locale::Locale as IcuLocale;
-use magnus::{function, method, prelude::*, Error, ExceptionClass, RHash, RModule, Ruby};
+use magnus::{Error, ExceptionClass, RHash, RModule, Ruby, function, method, prelude::*};
 use std::cell::RefCell;
 
 /// Ruby wrapper for ICU4X Locale

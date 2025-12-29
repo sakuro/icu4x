@@ -2,8 +2,8 @@ use icu::locale::fallback::LocaleFallbacker;
 use icu_provider_adapters::fallback::LocaleFallbackProvider;
 use icu_provider_blob::BlobDataProvider;
 use magnus::{
-    function, prelude::*, value::ReprValue, Error, ExceptionClass, RClass, RHash, RModule, Ruby,
-    Symbol, TryConvert, Value,
+    Error, ExceptionClass, RClass, RHash, RModule, Ruby, Symbol, TryConvert, Value, function,
+    prelude::*, value::ReprValue,
 };
 use std::fs;
 use std::path::PathBuf;

@@ -3,8 +3,8 @@ use icu_provider_blob::export::BlobExporter;
 use icu_provider_export::prelude::*;
 use icu_provider_source::SourceDataProvider;
 use magnus::{
-    function, prelude::*, value::ReprValue, Error, ExceptionClass, RArray, RClass, RHash, RModule,
-    Ruby, Symbol, Value,
+    Error, ExceptionClass, RArray, RClass, RHash, RModule, Ruby, Symbol, Value, function,
+    prelude::*, value::ReprValue,
 };
 use std::collections::HashMap;
 use std::fs::File;
@@ -65,11 +65,12 @@ impl DataGenerator {
             if locale_str == "und" {
                 has_und = true;
             }
-            let family = DataLocaleFamily::with_descendants(
-                locale_str
-                    .parse()
-                    .map_err(|e| Error::new(ruby.exception_arg_error(), format!("Invalid locale '{}': {}", locale_str, e)))?,
-            );
+            let family = DataLocaleFamily::with_descendants(locale_str.parse().map_err(|e| {
+                Error::new(
+                    ruby.exception_arg_error(),
+                    format!("Invalid locale '{}': {}", locale_str, e),
+                )
+            })?);
             locale_families.push(family);
         }
 
@@ -109,7 +110,10 @@ impl DataGenerator {
                         None => {
                             return Err(Error::new(
                                 ruby.exception_arg_error(),
-                                format!("unknown marker: '{}'. Use DataGenerator.available_markers to see valid names.", marker_name),
+                                format!(
+                                    "unknown marker: '{}'. Use DataGenerator.available_markers to see valid names.",
+                                    marker_name
+                                ),
                             ));
                         }
                     }
@@ -142,14 +146,15 @@ impl DataGenerator {
         }
 
         // Extract output path (must be Pathname)
-        let output_value: Value = kwargs
-            .fetch::<_, Value>(ruby.to_symbol("output"))
-            .map_err(|_| {
-                Error::new(
-                    ruby.exception_arg_error(),
-                    "missing required keyword argument: output",
-                )
-            })?;
+        let output_value: Value =
+            kwargs
+                .fetch::<_, Value>(ruby.to_symbol("output"))
+                .map_err(|_| {
+                    Error::new(
+                        ruby.exception_arg_error(),
+                        "missing required keyword argument: output",
+                    )
+                })?;
 
         let pathname_class: RClass = ruby.eval("Pathname")?;
         if !output_value.is_kind_of(pathname_class) {
@@ -201,14 +206,12 @@ impl DataGenerator {
 
         let exporter = BlobExporter::new_with_sink(Box::new(sink));
 
-        driver
-            .export(&source_provider, exporter)
-            .map_err(|e| {
-                let error_class: ExceptionClass = ruby
-                    .eval("ICU4X::DataGeneratorError")
-                    .unwrap_or_else(|_| ruby.exception_runtime_error());
-                Error::new(error_class, format!("Data export failed: {}", e))
-            })?;
+        driver.export(&source_provider, exporter).map_err(|e| {
+            let error_class: ExceptionClass = ruby
+                .eval("ICU4X::DataGeneratorError")
+                .unwrap_or_else(|_| ruby.exception_runtime_error());
+            Error::new(error_class, format!("Data export failed: {}", e))
+        })?;
 
         Ok(())
     }
@@ -234,6 +237,9 @@ impl DataGenerator {
 pub fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
     let class = module.define_class("DataGenerator", ruby.class_object())?;
     class.define_singleton_method("export", function!(DataGenerator::export, 1))?;
-    class.define_singleton_method("available_markers", function!(DataGenerator::available_markers, 0))?;
+    class.define_singleton_method(
+        "available_markers",
+        function!(DataGenerator::available_markers, 0),
+    )?;
     Ok(())
 }

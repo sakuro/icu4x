@@ -3,19 +3,19 @@ use crate::locale::Locale;
 use fixed_decimal::{Decimal, SignedRoundingMode, UnsignedRoundingMode};
 use icu::decimal::options::{DecimalFormatterOptions, GroupingStrategy};
 use icu::decimal::{DecimalFormatter, DecimalFormatterPreferences};
+use icu::experimental::dimension::currency::CurrencyCode;
 use icu::experimental::dimension::currency::formatter::{
     CurrencyFormatter, CurrencyFormatterPreferences,
 };
 use icu::experimental::dimension::currency::options::CurrencyFormatterOptions;
-use icu::experimental::dimension::currency::CurrencyCode;
 use icu::experimental::dimension::percent::formatter::{
     PercentFormatter, PercentFormatterPreferences,
 };
 use icu::experimental::dimension::percent::options::PercentFormatterOptions;
 use icu_provider::buf::AsDeserializingBufferProvider;
 use magnus::{
-    function, method, prelude::*, Error, ExceptionClass, RHash, RModule, Ruby, Symbol, TryConvert,
-    Value,
+    Error, ExceptionClass, RHash, RModule, Ruby, Symbol, TryConvert, Value, function, method,
+    prelude::*,
 };
 use tinystr::TinyAsciiStr;
 
@@ -241,7 +241,10 @@ impl NumberFormat {
                 let currency_tiny: TinyAsciiStr<3> = currency.parse().map_err(|_| {
                     Error::new(
                         ruby.exception_arg_error(),
-                        format!("currency must be a valid 3-letter ISO 4217 code, got: {}", currency),
+                        format!(
+                            "currency must be a valid 3-letter ISO 4217 code, got: {}",
+                            currency
+                        ),
                     )
                 })?;
                 let currency_code = CurrencyCode(currency_tiny);
@@ -366,9 +369,9 @@ impl NumberFormat {
         let formatted = match &self.inner {
             FormatterKind::Decimal(formatter) => formatter.format(&decimal).to_string(),
             FormatterKind::Percent(formatter) => formatter.format(&decimal).to_string(),
-            FormatterKind::Currency(formatter, currency_code) => {
-                formatter.format_fixed_decimal(&decimal, *currency_code).to_string()
-            }
+            FormatterKind::Currency(formatter, currency_code) => formatter
+                .format_fixed_decimal(&decimal, *currency_code)
+                .to_string(),
         };
         Ok(formatted)
     }
@@ -457,6 +460,9 @@ pub fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
     let class = module.define_class("NumberFormat", ruby.class_object())?;
     class.define_singleton_method("new", function!(NumberFormat::new, -1))?;
     class.define_method("format", method!(NumberFormat::format, 1))?;
-    class.define_method("resolved_options", method!(NumberFormat::resolved_options, 0))?;
+    class.define_method(
+        "resolved_options",
+        method!(NumberFormat::resolved_options, 0),
+    )?;
     Ok(())
 }

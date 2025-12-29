@@ -7,14 +7,14 @@ use icu::datetime::fieldsets::enums::{
 use icu::datetime::fieldsets::{self};
 use icu::datetime::input::DateTime;
 use icu::datetime::{DateTimeFormatter, DateTimeFormatterPreferences};
-use icu::time::zone::IanaParser;
 use icu::time::Time;
+use icu::time::zone::IanaParser;
 use icu_provider::buf::AsDeserializingBufferProvider;
-use jiff::tz::TimeZone;
 use jiff::Timestamp;
+use jiff::tz::TimeZone;
 use magnus::{
-    function, method, prelude::*, Error, ExceptionClass, RHash, RModule, Ruby, Symbol, TryConvert,
-    Value,
+    Error, ExceptionClass, RHash, RModule, Ruby, Symbol, TryConvert, Value, function, method,
+    prelude::*,
 };
 
 /// Date style option
@@ -184,12 +184,14 @@ impl DateTimeFormat {
 
         // Create formatter
         let prefs: DateTimeFormatterPreferences = (&icu_locale).into();
-        let formatter = DateTimeFormatter::try_new_unstable(
-            &dp.inner.as_deserializing(),
-            prefs,
-            field_set,
-        )
-        .map_err(|e| Error::new(error_class, format!("Failed to create DateTimeFormat: {}", e)))?;
+        let formatter =
+            DateTimeFormatter::try_new_unstable(&dp.inner.as_deserializing(), prefs, field_set)
+                .map_err(|e| {
+                    Error::new(
+                        error_class,
+                        format!("Failed to create DateTimeFormat: {}", e),
+                    )
+                })?;
 
         Ok(Self {
             inner: formatter,
@@ -332,7 +334,11 @@ impl DateTimeFormat {
     ///
     /// If time_zone is specified, the UTC time is converted to local time in that timezone.
     /// Otherwise, the time is treated as UTC.
-    fn convert_time_to_datetime(&self, ruby: &Ruby, time: Value) -> Result<DateTime<Gregorian>, Error> {
+    fn convert_time_to_datetime(
+        &self,
+        ruby: &Ruby,
+        time: Value,
+    ) -> Result<DateTime<Gregorian>, Error> {
         // Get UTC time from Ruby Time object
         let utc_time: Value = time.funcall("getutc", ())?;
 
@@ -346,11 +352,13 @@ impl DateTimeFormat {
         // Get year, month, day, hour, min, sec in the target timezone
         let (year, month, day, hour, min, sec) = if let Some(ref tz) = self.jiff_timezone {
             // Create a jiff Timestamp from UTC components
-            let timestamp = Timestamp::from_second(
-                utc_time.funcall::<_, _, i64>("to_i", ())?
-            ).map_err(|e| {
-                Error::new(ruby.exception_arg_error(), format!("Invalid timestamp: {}", e))
-            })?;
+            let timestamp = Timestamp::from_second(utc_time.funcall::<_, _, i64>("to_i", ())?)
+                .map_err(|e| {
+                    Error::new(
+                        ruby.exception_arg_error(),
+                        format!("Invalid timestamp: {}", e),
+                    )
+                })?;
 
             // Convert to local time in the target timezone
             let zoned = timestamp.to_zoned(tz.clone());
@@ -370,23 +378,18 @@ impl DateTimeFormat {
         };
 
         // Create ISO date and convert to Gregorian
-        let iso_date = Date::try_new_iso(year, month as u8, day as u8).map_err(|e| {
-            Error::new(
-                ruby.exception_arg_error(),
-                format!("Invalid date: {}", e),
-            )
-        })?;
+        let iso_date = Date::try_new_iso(year, month as u8, day as u8)
+            .map_err(|e| Error::new(ruby.exception_arg_error(), format!("Invalid date: {}", e)))?;
         let gregorian_date = iso_date.to_calendar(Gregorian);
 
         // Create time
-        let time_of_day = Time::try_new(hour as u8, min as u8, sec as u8, 0).map_err(|e| {
-            Error::new(
-                ruby.exception_arg_error(),
-                format!("Invalid time: {}", e),
-            )
-        })?;
+        let time_of_day = Time::try_new(hour as u8, min as u8, sec as u8, 0)
+            .map_err(|e| Error::new(ruby.exception_arg_error(), format!("Invalid time: {}", e)))?;
 
-        Ok(DateTime { date: gregorian_date, time: time_of_day })
+        Ok(DateTime {
+            date: gregorian_date,
+            time: time_of_day,
+        })
     }
 
     /// Get the resolved options
@@ -426,6 +429,9 @@ pub fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
     let class = module.define_class("DateTimeFormat", ruby.class_object())?;
     class.define_singleton_method("new", function!(DateTimeFormat::new, -1))?;
     class.define_method("format", method!(DateTimeFormat::format, 1))?;
-    class.define_method("resolved_options", method!(DateTimeFormat::resolved_options, 0))?;
+    class.define_method(
+        "resolved_options",
+        method!(DateTimeFormat::resolved_options, 0),
+    )?;
     Ok(())
 }

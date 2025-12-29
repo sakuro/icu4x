@@ -6,8 +6,8 @@ use icu::plurals::{
 };
 use icu_provider::buf::AsDeserializingBufferProvider;
 use magnus::{
-    function, method, prelude::*, Error, ExceptionClass, RArray, RHash, RModule, Ruby, Symbol,
-    TryConvert, Value,
+    Error, ExceptionClass, RArray, RHash, RModule, Ruby, Symbol, TryConvert, Value, function,
+    method, prelude::*,
 };
 
 /// Ruby wrapper for ICU4X PluralRules
@@ -88,7 +88,10 @@ impl PluralRules {
 
         // Get the DataProvider
         let dp: &DataProvider = TryConvert::try_convert(provider_value).map_err(|_| {
-            Error::new(ruby.exception_type_error(), "provider must be a DataProvider")
+            Error::new(
+                ruby.exception_type_error(),
+                "provider must be a DataProvider",
+            )
         })?;
 
         // Create PluralRules from DataProvider
@@ -195,6 +198,9 @@ pub fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
     class.define_singleton_method("new", function!(PluralRules::new, -1))?;
     class.define_method("select", method!(PluralRules::select, 1))?;
     class.define_method("categories", method!(PluralRules::categories, 0))?;
-    class.define_method("resolved_options", method!(PluralRules::resolved_options, 0))?;
+    class.define_method(
+        "resolved_options",
+        method!(PluralRules::resolved_options, 0),
+    )?;
     Ok(())
 }
