@@ -47,12 +47,12 @@ module ICU4X
     def resolved_options: () -> { locale: String, type: plural_rule_type }
   end
 
-  type number_format_style = :decimal | :percent
+  type number_format_style = :decimal | :percent | :currency
 
   class NumberFormat
-    def self.new: (Locale locale, provider: DataProvider, ?style: number_format_style, ?use_grouping: bool) -> NumberFormat
+    def self.new: (Locale locale, provider: DataProvider, ?style: number_format_style, ?currency: String, ?use_grouping: bool) -> NumberFormat
 
     def format: (Integer | Float number) -> String
-    def resolved_options: () -> { locale: String, style: number_format_style, use_grouping: bool }
+    def resolved_options: () -> { locale: String, style: number_format_style, use_grouping: bool, ?currency: String }
   end
 end

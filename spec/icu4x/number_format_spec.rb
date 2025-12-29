@@ -28,6 +28,12 @@ RSpec.describe ICU4X::NumberFormat do
       expect(formatter).to be_a(ICU4X::NumberFormat)
     end
 
+    it "creates a NumberFormat instance with style: :currency" do
+      formatter = ICU4X::NumberFormat.new(locale, provider:, style: :currency, currency: "USD")
+
+      expect(formatter).to be_a(ICU4X::NumberFormat)
+    end
+
     context "with invalid arguments" do
       it "raises ArgumentError when missing provider keyword" do
         expect { ICU4X::NumberFormat.new(locale) }
@@ -41,7 +47,17 @@ RSpec.describe ICU4X::NumberFormat do
 
       it "raises ArgumentError when style is invalid" do
         expect { ICU4X::NumberFormat.new(locale, provider:, style: :invalid) }
-          .to raise_error(ArgumentError, /style must be :decimal or :percent/)
+          .to raise_error(ArgumentError, /style must be :decimal, :percent, or :currency/)
+      end
+
+      it "raises ArgumentError when style is :currency but currency is missing" do
+        expect { ICU4X::NumberFormat.new(locale, provider:, style: :currency) }
+          .to raise_error(ArgumentError, /currency is required when style is :currency/)
+      end
+
+      it "raises ArgumentError when currency code is invalid" do
+        expect { ICU4X::NumberFormat.new(locale, provider:, style: :currency, currency: "INVALID") }
+          .to raise_error(ArgumentError, /currency must be a valid 3-letter ISO 4217 code/)
       end
     end
   end
@@ -125,6 +141,41 @@ RSpec.describe ICU4X::NumberFormat do
       end
     end
 
+    context "with style: :currency and USD" do
+      let(:provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
+      let(:formatter) { ICU4X::NumberFormat.new(ICU4X::Locale.parse("en-US"), provider:, style: :currency, currency: "USD") }
+
+      it "formats with dollar sign" do
+        expect(formatter.format(1234.56)).to eq("$1,234.56")
+      end
+
+      it "formats integers" do
+        expect(formatter.format(100)).to eq("$100")
+      end
+
+      it "formats negative amounts" do
+        expect(formatter.format(-50)).to eq("$-50")
+      end
+    end
+
+    context "with style: :currency and JPY" do
+      let(:provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
+      let(:formatter) { ICU4X::NumberFormat.new(ICU4X::Locale.parse("ja-JP"), provider:, style: :currency, currency: "JPY") }
+
+      it "formats with yen sign and no decimal places" do
+        expect(formatter.format(1234)).to eq("￥1,234")
+      end
+    end
+
+    context "with style: :currency and EUR in de-DE locale" do
+      let(:provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
+      let(:formatter) { ICU4X::NumberFormat.new(ICU4X::Locale.parse("de-DE"), provider:, style: :currency, currency: "EUR") }
+
+      it "formats with euro sign and German conventions" do
+        expect(formatter.format(1234.56)).to eq("1.234,56\u00A0€")
+      end
+    end
+
     context "with invalid number" do
       let(:provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
       let(:formatter) { ICU4X::NumberFormat.new(ICU4X::Locale.parse("en-US"), provider:) }
@@ -165,6 +216,17 @@ RSpec.describe ICU4X::NumberFormat do
         locale: "en-US",
         style: :percent,
         use_grouping: true
+      })
+    end
+
+    it "returns style: :currency and currency when specified" do
+      formatter = ICU4X::NumberFormat.new(ICU4X::Locale.parse("en-US"), provider:, style: :currency, currency: "USD")
+
+      expect(formatter.resolved_options).to eq({
+        locale: "en-US",
+        style: :currency,
+        use_grouping: true,
+        currency: "USD"
       })
     end
   end

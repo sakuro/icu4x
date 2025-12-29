@@ -429,6 +429,7 @@ dependencies = [
  "icu_provider_registry",
  "icu_provider_source",
  "magnus",
+ "tinystr",
 ]
 
 [[package]]
