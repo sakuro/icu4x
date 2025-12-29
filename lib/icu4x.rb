@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "zeitwerk"
 require_relative "icu4x/icu4x" # Native extension
 require_relative "icu4x/version"
 
@@ -19,14 +18,6 @@ module ICU4X
 
   # Error raised when data generation fails
   class DataGeneratorError < Error; end
-
-  loader = Zeitwerk::Loader.for_gem
-  loader.inflector.inflect("icu4x" => "ICU4X")
-  loader.ignore("#{__dir__}/icu4x/version.rb")
-  loader.ignore("#{__dir__}/icu4x/icu4x.bundle")
-  loader.ignore("#{__dir__}/icu4x/icu4x.so")
-  loader.ignore("#{__dir__}/icu4x/icu4x.dll")
-  loader.setup
 end
 
 # Enhance the native Locale class

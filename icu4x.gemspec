@@ -36,5 +36,4 @@ Gem::Specification.new do |spec|
   spec.extensions = ["ext/icu4x/extconf.rb"]
 
   spec.add_dependency "rb_sys", "~> 0.9"
-  spec.add_dependency "zeitwerk", "~> 2.7"
 end
