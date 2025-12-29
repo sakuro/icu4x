@@ -6,7 +6,7 @@ on:
   schedule:
     # Run at repository-specific time on Dec 25-31 (1-week window aligned with Ruby's release schedule)
     - cron: '56 16 25-31 12 *'
-    - # Run at repository-specific time on Apr 1-7
+    # Run at repository-specific time on Apr 1-7
     - cron: '56 16 1-7 4 *'
   workflow_dispatch:
 
