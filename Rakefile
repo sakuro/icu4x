@@ -18,7 +18,7 @@ require "rspec/core/rake_task"
 RSpec::Core::RakeTask.new(:spec)
 
 TEST_BLOB = "spec/fixtures/test-data.postcard"
-TEST_BLOB_LOCALES = %w[en ja ru ar und].freeze
+TEST_BLOB_LOCALES = %w[en ja ru ar de und].freeze
 
 directory "spec/fixtures"
 
