@@ -1,18 +1,37 @@
 use crate::data_provider::DataProvider;
 use crate::locale::Locale;
 use fixed_decimal::Decimal;
-use icu::decimal::{DecimalFormatter, DecimalFormatterPreferences};
 use icu::decimal::options::{DecimalFormatterOptions, GroupingStrategy};
+use icu::decimal::{DecimalFormatter, DecimalFormatterPreferences};
+use icu::experimental::dimension::percent::formatter::{
+    PercentFormatter, PercentFormatterPreferences,
+};
+use icu::experimental::dimension::percent::options::PercentFormatterOptions;
 use icu_provider::buf::AsDeserializingBufferProvider;
 use magnus::{
-    function, method, prelude::*, Error, ExceptionClass, RHash, RModule, Ruby, TryConvert, Value,
+    function, method, prelude::*, Error, ExceptionClass, RHash, RModule, Ruby, Symbol, TryConvert,
+    Value,
 };
 
-/// Ruby wrapper for ICU4X DecimalFormatter
+/// The style of number formatting
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Style {
+    Decimal,
+    Percent,
+}
+
+/// Internal formatter storage
+enum FormatterKind {
+    Decimal(DecimalFormatter),
+    Percent(PercentFormatter<DecimalFormatter>),
+}
+
+/// Ruby wrapper for ICU4X number formatters
 #[magnus::wrap(class = "ICU4X::NumberFormat", free_immediately, size)]
 pub struct NumberFormat {
-    inner: DecimalFormatter,
+    inner: FormatterKind,
     locale_str: String,
+    style: Style,
     use_grouping: bool,
 }
 
@@ -25,6 +44,7 @@ impl NumberFormat {
     /// # Arguments
     /// * `locale` - A Locale instance
     /// * `provider:` - A DataProvider instance
+    /// * `style:` - :decimal (default) or :percent
     /// * `use_grouping:` - Whether to use grouping separators (default: true)
     fn new(ruby: &Ruby, args: &[Value]) -> Result<Self, Error> {
         // Parse arguments: (locale, **kwargs)
@@ -42,9 +62,6 @@ impl NumberFormat {
         let icu_locale = locale_ref.clone();
         drop(locale_ref);
 
-        // Convert to DecimalFormatterPreferences
-        let prefs: DecimalFormatterPreferences = (&icu_locale).into();
-
         // Get kwargs
         let kwargs: RHash = if args.len() > 1 {
             TryConvert::try_convert(args[1])?
@@ -59,6 +76,24 @@ impl NumberFormat {
         let provider_value: Value = kwargs
             .lookup::<_, Option<Value>>(ruby.to_symbol("provider"))?
             .ok_or_else(|| Error::new(ruby.exception_arg_error(), "missing keyword: :provider"))?;
+
+        // Extract style option (default: :decimal)
+        let style_value: Option<Symbol> =
+            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("style"))?;
+        let decimal_sym = ruby.to_symbol("decimal");
+        let percent_sym = ruby.to_symbol("percent");
+        let style_sym = style_value.unwrap_or(decimal_sym);
+
+        let style = if style_sym.equal(decimal_sym)? {
+            Style::Decimal
+        } else if style_sym.equal(percent_sym)? {
+            Style::Percent
+        } else {
+            return Err(Error::new(
+                ruby.exception_arg_error(),
+                "style must be :decimal or :percent",
+            ));
+        };
 
         // Extract use_grouping option (default: true)
         let use_grouping: bool = kwargs
@@ -78,25 +113,47 @@ impl NumberFormat {
             )
         })?;
 
-        // Build options
-        let mut options = DecimalFormatterOptions::default();
-        options.grouping_strategy = Some(if use_grouping {
+        // Build decimal formatter options
+        let mut decimal_options = DecimalFormatterOptions::default();
+        decimal_options.grouping_strategy = Some(if use_grouping {
             GroupingStrategy::Auto
         } else {
             GroupingStrategy::Never
         });
 
-        // Create DecimalFormatter
-        let formatter = DecimalFormatter::try_new_unstable(
-            &dp.inner.as_deserializing(),
-            prefs,
-            options,
-        )
-        .map_err(|e| Error::new(error_class, format!("Failed to create NumberFormat: {}", e)))?;
+        // Create formatter based on style
+        let inner = match style {
+            Style::Decimal => {
+                let prefs: DecimalFormatterPreferences = (&icu_locale).into();
+                let formatter = DecimalFormatter::try_new_unstable(
+                    &dp.inner.as_deserializing(),
+                    prefs,
+                    decimal_options,
+                )
+                .map_err(|e| {
+                    Error::new(error_class, format!("Failed to create NumberFormat: {}", e))
+                })?;
+                FormatterKind::Decimal(formatter)
+            }
+            Style::Percent => {
+                let prefs: PercentFormatterPreferences = (&icu_locale).into();
+                let percent_options = PercentFormatterOptions::default();
+                let formatter = PercentFormatter::try_new_unstable(
+                    &dp.inner.as_deserializing(),
+                    prefs,
+                    percent_options,
+                )
+                .map_err(|e| {
+                    Error::new(error_class, format!("Failed to create NumberFormat: {}", e))
+                })?;
+                FormatterKind::Percent(formatter)
+            }
+        };
 
         Ok(Self {
-            inner: formatter,
+            inner,
             locale_str,
+            style,
             use_grouping,
         })
     }
@@ -112,8 +169,11 @@ impl NumberFormat {
         let ruby = Ruby::get().expect("Ruby runtime should be available");
 
         let decimal = Self::convert_to_decimal(&ruby, number)?;
-        let formatted = self.inner.format(&decimal);
-        Ok(formatted.to_string())
+        let formatted = match &self.inner {
+            FormatterKind::Decimal(formatter) => formatter.format(&decimal).to_string(),
+            FormatterKind::Percent(formatter) => formatter.format(&decimal).to_string(),
+        };
+        Ok(formatted)
     }
 
     /// Convert Ruby number to Decimal
@@ -146,7 +206,11 @@ impl NumberFormat {
         let ruby = Ruby::get().expect("Ruby runtime should be available");
         let hash = ruby.hash_new();
         hash.aset(ruby.to_symbol("locale"), self.locale_str.as_str())?;
-        hash.aset(ruby.to_symbol("style"), ruby.to_symbol("decimal"))?;
+        let style_sym = match self.style {
+            Style::Decimal => ruby.to_symbol("decimal"),
+            Style::Percent => ruby.to_symbol("percent"),
+        };
+        hash.aset(ruby.to_symbol("style"), style_sym)?;
         hash.aset(ruby.to_symbol("use_grouping"), self.use_grouping)?;
         Ok(hash)
     }

@@ -22,6 +22,12 @@ RSpec.describe ICU4X::NumberFormat do
       expect(formatter).to be_a(ICU4X::NumberFormat)
     end
 
+    it "creates a NumberFormat instance with style: :percent" do
+      formatter = ICU4X::NumberFormat.new(locale, provider:, style: :percent)
+
+      expect(formatter).to be_a(ICU4X::NumberFormat)
+    end
+
     context "with invalid arguments" do
       it "raises ArgumentError when missing provider keyword" do
         expect { ICU4X::NumberFormat.new(locale) }
@@ -31,6 +37,11 @@ RSpec.describe ICU4X::NumberFormat do
       it "raises TypeError when provider is invalid type" do
         expect { ICU4X::NumberFormat.new(locale, provider: "not a provider") }
           .to raise_error(TypeError, /provider must be a DataProvider/)
+      end
+
+      it "raises ArgumentError when style is invalid" do
+        expect { ICU4X::NumberFormat.new(locale, provider:, style: :invalid) }
+          .to raise_error(ArgumentError, /style must be :decimal or :percent/)
       end
     end
   end
@@ -88,6 +99,32 @@ RSpec.describe ICU4X::NumberFormat do
       end
     end
 
+    context "with style: :percent" do
+      let(:provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
+      let(:formatter) { ICU4X::NumberFormat.new(ICU4X::Locale.parse("en-US"), provider:, style: :percent) }
+
+      it "formats integers with percent sign" do
+        expect(formatter.format(25)).to eq("25%")
+      end
+
+      it "formats floats with percent sign" do
+        expect(formatter.format(12.5)).to eq("12.5%")
+      end
+
+      it "formats negative percentages" do
+        expect(formatter.format(-5)).to eq("-5%")
+      end
+    end
+
+    context "with style: :percent and de-DE locale" do
+      let(:provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
+      let(:formatter) { ICU4X::NumberFormat.new(ICU4X::Locale.parse("de-DE"), provider:, style: :percent) }
+
+      it "formats with German conventions" do
+        expect(formatter.format(1234.5)).to eq("1.234,5\u00A0%")
+      end
+    end
+
     context "with invalid number" do
       let(:provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
       let(:formatter) { ICU4X::NumberFormat.new(ICU4X::Locale.parse("en-US"), provider:) }
@@ -118,6 +155,16 @@ RSpec.describe ICU4X::NumberFormat do
         locale: "ja-JP",
         style: :decimal,
         use_grouping: false
+      })
+    end
+
+    it "returns style: :percent when specified" do
+      formatter = ICU4X::NumberFormat.new(ICU4X::Locale.parse("en-US"), provider:, style: :percent)
+
+      expect(formatter.resolved_options).to eq({
+        locale: "en-US",
+        style: :percent,
+        use_grouping: true
       })
     end
   end
