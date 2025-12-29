@@ -1,0 +1,88 @@
+name: Update Ruby Versions
+
+# Runs twice a year to keep Ruby version configuration up-to-date with all maintained Ruby versions
+# Data source: Ruby's official branches.yml from www.ruby-lang.org repository
+on:
+  schedule:
+    # Run at repository-specific time on Dec 25-31 (1-week window aligned with Ruby's release schedule)
+    - cron: '56 16 25-31 12 *'
+    - # Run at repository-specific time on Apr 1-7
+    - cron: '56 16 1-7 4 *'
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.WORKFLOW_UPDATE_TOKEN }}
+
+      - name: Get Ruby versions and update files
+        env:
+          GITHUB_TOKEN: ${{ secrets.WORKFLOW_UPDATE_TOKEN }}
+        run: |
+          # Get Ruby versions directly from branches.yml
+          ruby_data=$(gh api -H "Accept: application/vnd.github.raw" repos/ruby/www.ruby-lang.org/contents/_data/branches.yml | \
+            yq -o json | \
+            jq '{ruby: ([.[] | select(.status | test("maintenance")) | {name, date}] | sort_by(.date) | map(.name | tostring | if contains(".") then . else . + ".0" end))}')
+
+          min_version=$(echo "$ruby_data" | jq -r '.ruby[0]')
+          ruby_array=$(echo "$ruby_data" | jq -r '.ruby | map("\"" + . + "\"") | join(", ")')
+
+          sed -i.bak "s/TargetRubyVersion: [0-9.]\+/TargetRubyVersion: $min_version/" .rubocop.yml
+          rm -f .rubocop.yml.bak
+          sed -i.bak "s/ruby = \"[0-9.]\+\"/ruby = \"$min_version\"/" mise.toml
+          rm -f mise.toml.bak
+          sed -i.bak "s/ruby-version: \"[0-9.]\+\"/ruby-version: \"$min_version\"/" .github/workflows/release-validation.yml
+          rm -f .github/workflows/release-validation.yml.bak
+          sed -i.bak "s/ruby-version: \"[0-9.]\+\"/ruby-version: \"$min_version\"/" .github/workflows/release-publish.yml
+          rm -f .github/workflows/release-publish.yml.bak
+          sed -i.bak "s/ruby: \[.*\]/ruby: [$ruby_array]/" .github/workflows/ci.yml
+          rm -f .github/workflows/ci.yml.bak
+
+          # Find gemspec file (name varies per gem)
+          gemspec_file=$(ls *.gemspec | head -n 1)
+          if [ -n "$gemspec_file" ]; then
+            sed -i.bak "s/required_ruby_version = \">= [0-9.]\+\"/required_ruby_version = \">= $min_version\"/" "$gemspec_file"
+            rm -f "$gemspec_file.bak"
+          fi
+
+      - name: Setup Git User
+        uses: git-actions/set-user@v1
+
+      - name: Create Pull Request
+        env:
+          GITHUB_TOKEN: ${{ secrets.WORKFLOW_UPDATE_TOKEN }}
+        run: |
+          # Check if there are changes
+          if git diff --quiet .rubocop.yml mise.toml .github/workflows/ci.yml .github/workflows/release-*.yml *.gemspec; then
+            echo "No changes detected"
+            exit 0
+          fi
+
+          # Create branch and commit
+          branch="update-ruby-versions"
+          git checkout -b "$branch"
+          git add .rubocop.yml mise.toml .github/workflows/ci.yml .github/workflows/release-*.yml *.gemspec
+          git commit -m ":arrow_up: Update Ruby versions and version requirements"
+          git push -f origin "$branch"
+
+          # Check if PR already exists
+          if gh pr list --head "$branch" --json number -q '.[0].number' | grep -q .; then
+            echo "PR already exists"
+            exit 0
+          fi
+
+          # Create PR body in temporary file
+          cat > /tmp/pr-body.md <<'EOF'
+          Automated update of maintained Ruby versions from Ruby's official branches.yml.
+
+          This PR updates:
+          - `.github/workflows/ci.yml` test matrix to include all maintained Ruby versions
+          - `.github/workflows/release-*.yml` ruby-version to match the minimum Ruby version
+          - `.rubocop.yml` TargetRubyVersion to match the minimum Ruby version
+          - `*.gemspec` required_ruby_version to match the minimum Ruby version
+          - `mise.toml` ruby version to match the minimum Ruby version
+          EOF
+          gh pr create --title ":arrow_up: Update Ruby versions" --body-file /tmp/pr-body.md

@@ -1,0 +1,41 @@
+AllCops:
+  DisplayCopNames: true
+  DisplayStyleGuide: true
+  EnabledByDefault: true
+  Exclude:
+    - bin/**/*
+    - vendor/**/*
+  ExtraDetails: true
+  NewCops: enable
+  TargetRubyVersion: 3.2
+  UseCache: true
+
+inherit_mode:
+  merge:
+    - Exclude
+
+plugins:
+  - rubocop-performance
+  - rubocop-rake
+  - rubocop-rspec
+
+inherit_gem:
+  docquet:
+    - config/cops/bundler.yml
+    - config/cops/gemspec.yml
+    - config/cops/layout.yml
+    - config/cops/lint.yml
+    - config/cops/metrics.yml
+    - config/cops/naming.yml
+    - config/cops/performance.yml
+    - config/cops/rake.yml
+    - config/cops/rspec.yml
+    - config/cops/security.yml
+    - config/cops/style.yml
+
+inherit_from: .rubocop_todo.yml
+
+# Project-specific settings can be added here
+# Example:
+# Style/Documentation:
+#   Enabled: false

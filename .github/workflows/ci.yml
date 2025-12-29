@@ -1,0 +1,30 @@
+name: CI
+
+# This workflow runs tests and quality checks across multiple Ruby versions.
+# It ensures compatibility and maintains code quality for all supported versions.
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Ruby ${{ matrix.ruby }}
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby: ["3.2", "3.3", "3.4"]
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+      - name: Run the default task
+        run: bundle exec rake

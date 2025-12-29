@@ -1,0 +1,200 @@
+name: Release Preparation
+
+# This workflow only handles file updates for release preparation.
+# All validations are performed by the Release Validation workflow on PR creation.
+
+env:
+  GEM_NAME: ${{ github.event.repository.name }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  create-release-branch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # Required for git push (branch and tag creation)
+      pull-requests: write  # Required for PR creation
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
+
+    - name: Set git user
+      uses: git-actions/set-user@v1
+
+    - name: Create release branch
+      run: |
+        git checkout -b release-v${{ github.event.inputs.version }}
+
+    - name: Update version file
+      run: |
+        GEM_PATH="${{ env.GEM_NAME }}"
+        GEM_PATH="${GEM_PATH//-//}"  # Convert hyphens to slashes for path
+        sed -i 's/VERSION = ".*"/VERSION = "${{ github.event.inputs.version }}"/' "lib/$GEM_PATH/version.rb"
+
+    - name: Update CHANGELOG.md
+      run: |
+        # Get current date in UTC (GitHub Actions runs in UTC timezone)
+        RELEASE_DATE=$(date -u +%Y-%m-%d)
+
+        # Update changelog
+        sed -i "s/## \[Unreleased\]/## [${{ github.event.inputs.version }}] - $RELEASE_DATE/" CHANGELOG.md
+
+        # Add new unreleased section
+        sed -i "/## \[${{ github.event.inputs.version }}\]/i## [Unreleased]\n" CHANGELOG.md
+
+    - name: Commit changes
+      run: |
+        GEM_PATH="${{ env.GEM_NAME }}"
+        GEM_PATH="${GEM_PATH//-//}"  # Convert hyphens to slashes for path
+        git add "lib/$GEM_PATH/version.rb" CHANGELOG.md
+        git commit -m "$(cat <<'EOF'
+        :bookmark: Prepare release v${{ github.event.inputs.version }}
+
+        - Update VERSION constant to ${{ github.event.inputs.version }}
+        - Update CHANGELOG.md for release
+        - Add new unreleased section for future changes
+        EOF
+        )"
+
+    - name: Create release tag
+      run: |
+        git tag -a "v${{ github.event.inputs.version }}" \
+          -m "Release v${{ github.event.inputs.version }}"
+
+    - name: Push release branch and tag
+      run: |
+        git push -u origin release-v${{ github.event.inputs.version }}
+        git push origin v${{ github.event.inputs.version }}
+
+    - name: Check if first release
+      id: check_first_release
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Check if any releases exist
+        RELEASE_COUNT=$(gh release list --limit 1 --json name --jq 'length')
+        if [ "$RELEASE_COUNT" -eq 0 ]; then
+          echo "is_first_release=true" >> $GITHUB_OUTPUT
+        else
+          echo "is_first_release=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Create Pull Request
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Generate PR body based on whether this is the first release
+        if [ "${{ steps.check_first_release.outputs.is_first_release }}" = "true" ]; then
+          # First release - include full setup checklist
+          PR_BODY="$(cat <<'EOF'
+        ## Summary
+
+        Prepare for release v${{ github.event.inputs.version }}
+
+        **Note**: This is the first release for this gem.
+
+        ## Changes
+
+        - Update VERSION constant to ${{ github.event.inputs.version }}
+        - Update CHANGELOG.md with release date
+        - Add new unreleased section for future development
+
+        ## Quality Checks
+
+        These checks will be performed automatically by CI and validation workflows:
+
+        - RuboCop checks
+        - All tests pass
+        - Version format validation
+        - CHANGELOG.md format validation
+
+        ## Release Requirements Checklist
+
+        Before merging this PR, ensure the following requirements are met:
+
+        ### Trusted Publishing Setup
+        - [ ] **Pending Trusted Publisher**: Create on RubyGems.org for OIDC authentication
+        - [ ] Configure at: https://rubygems.org/oidc/pending_trusted_publishers
+        - [ ] Required settings:
+          - Gem name: `${{ env.GEM_NAME }}`
+          - Repository owner: `${{ github.repository_owner }}`
+          - Repository name: `${{ github.event.repository.name }}`
+          - Workflow filename: `release-publish.yml`
+          - Environment name: `release`
+        - [ ] **Note**: Pending publisher will auto-convert to active publisher after first successful gem push
+
+        **Note**: GitHub repository settings (workflow permissions, environment) are automatically configured by the initialization script.
+        - [ ] Guide: https://guides.rubygems.org/trusted-publishing/releasing-gems/
+
+        ### RubyGems.org Setup
+        - [ ] **Gem name availability**: Verify `${{ env.GEM_NAME }}` is available or owned by you
+        - [ ] **Account verified**: RubyGems.org account email verified and MFA enabled (recommended)
+        - [ ] **MFA Compatibility**: Trusted Publishing works seamlessly with MFA enabled
+        - [ ] Configure MFA at: https://rubygems.org/profile/edit
+        - [ ] **Note**: With Trusted Publishing, you can safely use "UI and API" MFA level without breaking CI/CD
+        - [ ] MFA setup guide: https://guides.rubygems.org/setting-up-multifactor-authentication/
+
+        ## Post-Merge Actions
+
+        After merging this PR, the release workflow will automatically:
+        - Use the git tag v${{ github.event.inputs.version }} (already created on this branch)
+        - Build and publish gem to RubyGems from the tagged commit
+        - Create GitHub release with assets
+
+        EOF
+        )"
+        else
+          # Subsequent release - simplified checklist
+          PR_BODY="$(cat <<'EOF'
+        ## Summary
+
+        Prepare for release v${{ github.event.inputs.version }}
+
+        ## Changes
+
+        - Update VERSION constant to ${{ github.event.inputs.version }}
+        - Update CHANGELOG.md with release date
+        - Add new unreleased section for future development
+
+        ## Quality Checks
+
+        These checks will be performed automatically by CI and validation workflows:
+
+        - RuboCop checks
+        - All tests pass
+        - Version format validation
+        - CHANGELOG.md format validation
+
+        ## Release Requirements Checklist
+
+        Before merging this PR, ensure the following requirements are met:
+
+        - [ ] **CHANGELOG.md**: Verify all notable changes are documented
+        - [ ] **Breaking changes**: If any, ensure they are clearly documented in CHANGELOG
+        - [ ] **Dependencies**: Check if any dependency updates are needed
+        - [ ] **Documentation**: Ensure README and docs reflect any new features or changes
+
+        ## Post-Merge Actions
+
+        After merging this PR, the release workflow will automatically:
+        - Use the git tag v${{ github.event.inputs.version }} (already created on this branch)
+        - Build and publish gem to RubyGems from the tagged commit
+        - Create GitHub release with assets
+
+        EOF
+        )"
+        fi
+
+        # Create PR with the appropriate body
+        gh pr create \
+          --title ":bookmark: Release v${{ github.event.inputs.version }}" \
+          --body "$PR_BODY"

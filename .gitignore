@@ -1,0 +1,36 @@
+# bundles
+/vendor/bundle/
+
+# Ignore generated binstubs except console and setup
+/bin/*
+!/bin/console
+!/bin/setup
+
+# Tempoary files
+/tmp/
+
+# RSpec
+/spec/reports/
+/.rspec_status
+
+# SimpleCov
+/coverage/
+
+# YARD
+/.yardoc
+## Generated API docs (specified in .yardopts)
+/doc/api/
+
+# Packaging
+/pkg/
+## Gem should ignore Gemfile.lock
+/Gemfile.lock
+
+# MCP
+/.mcp.json
+## Ignore serena stuff except project.yml
+/.serena/
+!/.serena/project.yml
+
+# RBS collection
+/.gem_rbs_collecton/

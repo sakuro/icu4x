@@ -1,0 +1,14 @@
+#!/usr/bin/env zsh
+
+autoload -U colors
+colors
+# prefix for -x
+PS4="${fg[cyan]}[$0:t]$reset_color "
+# prefix for stdout
+exec > >(sed -e "s/^/${fg[magenta]}[$0:t]$reset_color /")
+
+IFS=$'\n\t'
+set -euxo pipefail
+
+bundle install
+# Do any other automated setup that you need to do here
