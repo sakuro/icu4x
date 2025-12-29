@@ -191,11 +191,12 @@ nf = ICU4X::NumberFormat.new(
   style: :percent
 )
 
-nf.format(25)
+nf.format(0.25)
 # => "25%"
-```
 
-Note: Unlike JavaScript's Intl.NumberFormat, this does not multiply by 100. Pass the value as-is.
+nf.format(1.5)
+# => "150%"
+```
 
 ### Formatting to Parts (Future)
 

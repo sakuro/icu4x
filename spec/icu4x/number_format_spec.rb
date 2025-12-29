@@ -140,16 +140,20 @@ RSpec.describe ICU4X::NumberFormat do
       let(:provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
       let(:formatter) { ICU4X::NumberFormat.new(ICU4X::Locale.parse("en-US"), provider:, style: :percent) }
 
-      it "formats integers with percent sign" do
-        expect(formatter.format(25)).to eq("25%")
+      it "multiplies by 100 and adds percent sign" do
+        expect(formatter.format(0.25)).to eq("25%")
       end
 
       it "formats floats with percent sign" do
-        expect(formatter.format(12.5)).to eq("12.5%")
+        expect(formatter.format(0.125)).to eq("12.5%")
       end
 
       it "formats negative percentages" do
-        expect(formatter.format(-5)).to eq("-5%")
+        expect(formatter.format(-0.05)).to eq("-5%")
+      end
+
+      it "formats values greater than 1" do
+        expect(formatter.format(1.5)).to eq("150%")
       end
     end
 
@@ -158,7 +162,7 @@ RSpec.describe ICU4X::NumberFormat do
       let(:formatter) { ICU4X::NumberFormat.new(ICU4X::Locale.parse("de-DE"), provider:, style: :percent) }
 
       it "formats with German conventions" do
-        expect(formatter.format(1234.5)).to eq("1.234,5\u00A0%")
+        expect(formatter.format(12.345)).to eq("1.234,5\u00A0%")
       end
     end
 

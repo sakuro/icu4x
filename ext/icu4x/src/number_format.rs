@@ -346,6 +346,12 @@ impl NumberFormat {
 
         let mut decimal = Self::convert_to_decimal(&ruby, number)?;
 
+        // For percent style, multiply by 100 (same as Intl.NumberFormat)
+        if self.style == Style::Percent {
+            decimal.multiply_pow10(2);
+            decimal.trim_start();
+        }
+
         // Apply digit options (order matters: round first, then pad)
         if let Some(max) = self.maximum_fraction_digits {
             decimal.round_with_mode(-max, self.rounding_mode.to_signed_rounding_mode());
