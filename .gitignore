@@ -35,7 +35,7 @@
 !/.serena/project.yml
 
 # RBS collection
-/.gem_rbs_collecton/
+/.gem_rbs_collection/
 
 # Rust build artifacts
 /target/
