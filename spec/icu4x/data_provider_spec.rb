@@ -4,8 +4,8 @@ require "pathname"
 
 RSpec.describe ICU4X::DataProvider do
   let(:fixtures_path) { Pathname.new(__dir__).parent / "fixtures" }
-  let(:valid_blob_path) { fixtures_path / "test.blob" }
-  let(:nonexistent_path) { fixtures_path / "nonexistent.blob" }
+  let(:valid_blob_path) { fixtures_path / "test-data.postcard" }
+  let(:nonexistent_path) { fixtures_path / "nonexistent.postcard" }
 
   describe ".from_blob" do
     context "with a valid blob file" do
@@ -37,7 +37,7 @@ RSpec.describe ICU4X::DataProvider do
 
     context "with invalid blob data" do
       it "raises DataError" do
-        invalid_blob_path = fixtures_path / "invalid.blob"
+        invalid_blob_path = fixtures_path / "invalid.postcard"
         invalid_blob_path.write("not a valid blob")
 
         begin

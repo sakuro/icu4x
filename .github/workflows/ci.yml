@@ -27,5 +27,13 @@ jobs:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
           cargo-cache: true
+      - name: Cache test data blob
+        uses: actions/cache@v4
+        with:
+          path: spec/fixtures/test-data.postcard
+          # Key includes:
+          # - Rakefile: contains TEST_BLOB_LOCALES which determines included locales
+          # - Cargo.lock: icu_provider_source version determines CLDR data version
+          key: test-blob-${{ hashFiles('Rakefile', 'Cargo.lock') }}
       - name: Run the default task
         run: bundle exec rake

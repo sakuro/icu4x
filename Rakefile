@@ -4,7 +4,7 @@ require "bundler/gem_tasks"
 
 require "rake/clean"
 CLEAN.include("coverage", ".rspec_status", ".yardoc")
-CLOBBER.include("doc/api", "pkg", "lib/**/*.bundle", "lib/**/*.so", "lib/**/*.dll")
+CLOBBER.include("doc/api", "pkg", "lib/**/*.bundle", "lib/**/*.so", "lib/**/*.dll", "spec/fixtures/*.postcard")
 
 require "rb_sys/extensiontask"
 RbSys::ExtensionTask.new("icu4x") do |ext|
@@ -16,7 +16,24 @@ RuboCop::RakeTask.new
 
 require "rspec/core/rake_task"
 RSpec::Core::RakeTask.new(:spec)
-Rake::Task[:spec].enhance([:compile])
+
+TEST_BLOB = "spec/fixtures/test-data.postcard"
+TEST_BLOB_LOCALES = %w[en ja ru ar und].freeze
+
+directory "spec/fixtures"
+
+file TEST_BLOB => ["spec/fixtures", :compile] do |t|
+  require "icu4x"
+  require "pathname"
+  ICU4X::DataGenerator.export(
+    locales: TEST_BLOB_LOCALES,
+    markers: :all,
+    format: :blob,
+    output: Pathname.new(t.name)
+  )
+end
+
+Rake::Task[:spec].enhance([TEST_BLOB])
 
 require "yard"
 YARD::Rake::YardocTask.new(:doc)

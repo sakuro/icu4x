@@ -6,7 +6,7 @@ require "tmpdir"
 RSpec.describe ICU4X::DataGenerator do
   describe ".export" do
     let(:output_dir) { Pathname.new(Dir.mktmpdir) }
-    let(:output_path) { output_dir / "test.blob" }
+    let(:output_path) { output_dir / "test-data.postcard" }
 
     before do
       allow(Kernel).to receive(:warn)

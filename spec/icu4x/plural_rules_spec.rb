@@ -4,7 +4,7 @@ require "pathname"
 
 RSpec.describe ICU4X::PluralRules do
   let(:fixtures_path) { Pathname.new(__dir__).parent / "fixtures" }
-  let(:valid_blob_path) { fixtures_path / "test.blob" }
+  let(:valid_blob_path) { fixtures_path / "test-data.postcard" }
 
   describe ".new" do
     context "with DataProvider" do
