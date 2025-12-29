@@ -52,7 +52,7 @@ module ICU4X
   class NumberFormat
     def self.new: (Locale locale, provider: DataProvider, ?style: number_format_style, ?currency: String, ?use_grouping: bool) -> NumberFormat
 
-    def format: (Integer | Float number) -> String
+    def format: (Integer | Float | BigDecimal number) -> String
     def resolved_options: () -> { locale: String, style: number_format_style, use_grouping: bool, ?currency: String }
   end
 end

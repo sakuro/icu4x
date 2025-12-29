@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "bigdecimal"
 require "pathname"
 
 RSpec.describe ICU4X::NumberFormat do
@@ -176,12 +177,33 @@ RSpec.describe ICU4X::NumberFormat do
       end
     end
 
+    context "with BigDecimal" do
+      let(:provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
+      let(:formatter) { ICU4X::NumberFormat.new(ICU4X::Locale.parse("en-US"), provider:) }
+
+      it "formats BigDecimal values" do
+        expect(formatter.format(BigDecimal("1234.56"))).to eq("1,234.56")
+      end
+
+      it "formats large BigDecimal values with full precision" do
+        expect(formatter.format(BigDecimal("12345678901234567890.123456789"))).to eq("12,345,678,901,234,567,890.123456789")
+      end
+
+      it "formats BigDecimal zero" do
+        expect(formatter.format(BigDecimal(0))).to eq("0.0")
+      end
+
+      it "formats negative BigDecimal" do
+        expect(formatter.format(BigDecimal("-1234.56"))).to eq("-1,234.56")
+      end
+    end
+
     context "with invalid number" do
       let(:provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
       let(:formatter) { ICU4X::NumberFormat.new(ICU4X::Locale.parse("en-US"), provider:) }
 
       it "raises TypeError for string" do
-        expect { formatter.format("1234") }.to raise_error(TypeError, /number must be an Integer or Float/)
+        expect { formatter.format("1234") }.to raise_error(TypeError, /number must be an Integer, Float, or BigDecimal/)
       end
     end
   end

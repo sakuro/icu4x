@@ -239,12 +239,35 @@ impl NumberFormat {
         } else if number.is_kind_of(ruby.class_integer()) {
             let n: i64 = TryConvert::try_convert(number)?;
             Ok(Decimal::from(n))
+        } else if Self::is_big_decimal(ruby, number) {
+            // Call to_s("F") to get fixed-point format string
+            let s: String = number.funcall("to_s", ("F",))?;
+            s.parse::<Decimal>().map_err(|e| {
+                Error::new(
+                    ruby.exception_arg_error(),
+                    format!("Failed to convert BigDecimal to Decimal: {}", e),
+                )
+            })
         } else {
             Err(Error::new(
                 ruby.exception_type_error(),
-                "number must be an Integer or Float",
+                "number must be an Integer, Float, or BigDecimal",
             ))
         }
+    }
+
+    /// Check if value is a BigDecimal
+    fn is_big_decimal(ruby: &Ruby, value: Value) -> bool {
+        // Try to get BigDecimal class; if bigdecimal is not loaded, return false
+        if let Ok(bigdecimal_class) = ruby.eval::<Value>("defined?(BigDecimal) && BigDecimal") {
+            if bigdecimal_class.is_nil() {
+                return false;
+            }
+            if let Ok(class) = magnus::RClass::try_convert(bigdecimal_class) {
+                return value.is_kind_of(class);
+            }
+        }
+        false
     }
 
     /// Get the resolved options
