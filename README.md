@@ -1,38 +1,76 @@
-# Icu4x
+# ICU4X
 
-TODO: Add a brief description of what this gem does.
+Ruby bindings for [ICU4X](https://github.com/unicode-org/icu4x), providing internationalization functionality.
 
-## Installation
+## Overview
 
-Add this line to your application's Gemfile:
+ICU4X is a Unicode library that provides locale-aware formatting and processing. This gem wraps ICU4X via Rust extensions, offering an API similar to JavaScript's Intl.
+
+No locale data is bundled with the gem. Users generate only the data they need, keeping applications lean.
+
+## Features
+
+- **Locale** - BCP 47 locale identifier parsing and handling
+- **DateTimeFormat** - Locale-aware date/time formatting with timezone support
+- **NumberFormat** - Number, currency, and percent formatting
+- **PluralRules** - CLDR plural category selection (cardinal/ordinal)
+- **DataProvider** - Locale data loading with automatic fallback
+- **DataGenerator** - Locale data generation from CLDR
+
+## Requirements
+
+- Ruby 3.2+
+- Rust toolchain (for building the native extension)
+
+## Setup
+
+Add to your Gemfile:
 
 ```ruby
-gem 'icu4x'
+gem "icu4x"
 ```
 
-And then execute:
+Then generate locale data for your application:
 
-```bash
-bundle install
-```
+```ruby
+require "icu4x"
 
-Or install it yourself as:
-
-```bash
-gem install icu4x
+ICU4X::DataGenerator.export(
+  locales: %w[en ja],
+  markers: :all,
+  format: :blob,
+  output: Pathname.new("data/i18n.blob")
+)
 ```
 
 ## Usage
 
 ```ruby
-require 'icu4x'
+require "icu4x"
 
-# TODO: Add usage examples
+# Load locale data
+provider = ICU4X::DataProvider.from_blob(Pathname.new("data/i18n.blob"))
+
+# Parse locale
+locale = ICU4X::Locale.parse("ja-JP")
+
+# Date/time formatting
+dtf = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long)
+dtf.format(Time.now)
+# => "2025年12月30日"
+
+# Number formatting
+nf = ICU4X::NumberFormat.new(locale, provider:, style: :currency, currency: "JPY")
+nf.format(1_234_567)
+# => "￥1,234,567"
+
+# Plural rules
+pr = ICU4X::PluralRules.new(ICU4X::Locale.parse("en"), provider:)
+pr.select(1)   # => :one
+pr.select(2)   # => :other
 ```
 
-## Development
-
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+See [doc/](doc/) for detailed documentation.
 
 ## Contributing
 
@@ -40,7 +78,4 @@ Bug reports and pull requests are welcome on GitHub at https://github.com/sakuro
 
 ## License
 
-TODO: Specify your license here.
-
-This product is generated from the [gem-scaffold](https://github.com/sakuro/gem-scaffold) template.
-While gem-scaffold itself is MIT licensed, the main code can be redistributed under the license chosen by the author after generation.
+MIT License. See [LICENSE](LICENSE.txt) for details.

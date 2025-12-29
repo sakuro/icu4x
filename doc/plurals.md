@@ -1,8 +1,6 @@
 # PluralRules
 
-Plural rules functionality. Equivalent to JavaScript Intl.PluralRules.
-
-**Status**: Future implementation
+Plural rules functionality. Equivalent to JavaScript's Intl.PluralRules.
 
 ---
 
@@ -32,7 +30,7 @@ module ICU4X
     def initialize(locale, provider:, type: :cardinal) = ...
 
     # Determine plural category
-    # @param number [Numeric] Target to evaluate
+    # @param number [Numeric] Number to evaluate
     # @return [Symbol] :zero, :one, :two, :few, :many, :other
     def select(number) = ...
 
@@ -40,7 +38,7 @@ module ICU4X
     # @return [Array<Symbol>]
     def categories = ...
 
-    # Resolved options
+    # Get resolved options
     # @return [Hash]
     def resolved_options = ...
   end
@@ -186,108 +184,8 @@ pluralize_items(5, locale: ICU4X::Locale.parse("en"), provider: provider)
 
 ---
 
-## Rust Extension
-
-When implemented, will be added to `ext/icu4x/src/`.
-
-### Dependent Crates
-
-```toml
-[dependencies]
-icu_plurals = "2.0"
-fixed_decimal = "0.5"
-```
-
-### Rust Module Structure
-
-```
-ext/icu4x/src/
-├─ lib.rs           # Entry point (add plural_rules module)
-└─ plural_rules.rs  # PluralRules bindings
-```
-
----
-
-## Test Data Generation
-
-```bash
-# Test data for plurals (includes ru, ar for full category coverage)
-$ icu4x-datagen --locales en,ja,ru,ar --markers plurals --format blob --output spec/fixtures/test.blob
-```
-
----
-
-## Design Notes
+## Notes
 
 - Supports decimals (e.g., 1.5 is :other in English)
 - Category meanings differ by language
 - Can be used in combination with Rails I18n pluralization
-
----
-
-## Development/Test Locales
-
-### Plural Category Coverage
-
-Multiple locales are needed to test all 6 categories:
-
-| Category | Example Test Locales |
-|----------|---------------------|
-| `:zero` | Arabic (ar) |
-| `:one` | English (en), Russian (ru) |
-| `:two` | Arabic (ar) |
-| `:few` | Russian (ru), Arabic (ar) |
-| `:many` | Russian (ru), Arabic (ar) |
-| `:other` | All languages |
-
-### Recommended Test Locale Set
-
-**Minimum Set (3 locales)**:
-- `en` - English: `:one`, `:other`
-- `ru` - Russian: `:one`, `:few`, `:many`, `:other`
-- `ar` - Arabic: All 6 categories
-
-```ruby
-TEST_LOCALES = %w[en ru ar].freeze
-```
-
-### Testing Ordinals
-
-English ordinals have special patterns:
-
-```ruby
-# English ordinal test cases
-{
-  1 => :one,   # 1st
-  2 => :two,   # 2nd
-  3 => :few,   # 3rd
-  4 => :other, # 4th
-  11 => :other, # 11th (exception)
-  12 => :other, # 12th (exception)
-  13 => :other, # 13th (exception)
-  21 => :one,  # 21st
-  22 => :two,  # 22nd
-  23 => :few,  # 23rd
-}
-```
-
-### Test Data Generation with DataGenerator
-
-```ruby
-# Development/test data generation
-ICU4X::DataGenerator.export(
-  locales: %w[en ru ar ja],  # ja is :other only, but for Japanese environment testing
-  markers: [:plurals],
-  format: :blob,
-  output: Pathname.new("spec/fixtures/plurals_test.blob")
-)
-```
-
----
-
-## Related
-
-- [icu4x.md](./icu4x.md)
-- [data_provider.md](./data_provider.md)
-- [icu4x_ruby_design.md](../icu4x_ruby_design.md) - Section 6
-- [CLDR Plural Rules](https://cldr.unicode.org/index/cldr-spec/plural-rules)
