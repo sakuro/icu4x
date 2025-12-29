@@ -2,6 +2,7 @@
 
 target :lib do
   signature "sig"
+  library "bigdecimal"
 
   check "lib"
   ignore "lib/icu4x/icu4x.bundle"
