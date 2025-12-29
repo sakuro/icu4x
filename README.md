@@ -10,7 +10,7 @@ No locale data is bundled with the gem. Users generate only the data they need, 
 
 ## Features
 
-- **Locale** - BCP 47 locale identifier parsing and handling
+- **Locale** - BCP 47 and POSIX locale identifier parsing
 - **DateTimeFormat** - Locale-aware date/time formatting with timezone support
 - **NumberFormat** - Number, currency, and percent formatting
 - **PluralRules** - CLDR plural category selection (cardinal/ordinal)
@@ -51,8 +51,9 @@ require "icu4x"
 # Load locale data
 provider = ICU4X::DataProvider.from_blob(Pathname.new("data/i18n.blob"))
 
-# Parse locale
+# Parse locale (BCP 47 or POSIX format)
 locale = ICU4X::Locale.parse("ja-JP")
+locale = ICU4X::Locale.parse_posix("ja_JP.UTF-8")  # POSIX format also supported
 
 # Date/time formatting
 dtf = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long)

@@ -1,5 +1,5 @@
-use magnus::{function, method, prelude::*, Error, RHash, RModule, Ruby};
 use icu_locale::Locale as IcuLocale;
+use magnus::{function, method, prelude::*, Error, ExceptionClass, RHash, RModule, Ruby};
 use std::cell::RefCell;
 
 /// Ruby wrapper for ICU4X Locale
@@ -9,17 +9,93 @@ pub struct Locale {
 }
 
 impl Locale {
+    /// Get the LocaleError exception class
+    fn locale_error_class(ruby: &Ruby) -> ExceptionClass {
+        ruby.eval("ICU4X::LocaleError")
+            .unwrap_or_else(|_| ruby.exception_runtime_error())
+    }
+
     /// Parse a BCP 47 locale string
     fn parse(ruby: &Ruby, s: String) -> Result<Self, Error> {
         let locale: IcuLocale = s.parse().map_err(|e| {
             Error::new(
-                ruby.exception_arg_error(),
+                Self::locale_error_class(ruby),
                 format!("Invalid locale: {e}"),
             )
         })?;
         Ok(Self {
             inner: RefCell::new(locale),
         })
+    }
+
+    /// Parse a POSIX locale string (e.g., "ja_JP.UTF-8")
+    ///
+    /// Converts POSIX locale format to BCP 47 format:
+    /// - `ja_JP.UTF-8` -> `ja-JP` (codeset ignored)
+    /// - `C` or `POSIX` -> `und` (undetermined)
+    /// - `sr_RS@latin` -> `sr-Latn-RS` (@latin/@cyrillic converted to script)
+    fn parse_posix(ruby: &Ruby, posix_str: String) -> Result<Self, Error> {
+        // Handle special cases
+        if posix_str == "C" || posix_str == "POSIX" {
+            return Self::parse(ruby, "und".to_string());
+        }
+
+        // Handle empty string
+        if posix_str.is_empty() {
+            return Err(Error::new(
+                Self::locale_error_class(ruby),
+                "Invalid POSIX locale: empty string",
+            ));
+        }
+
+        // Parse POSIX format: language[_territory][.codeset][@modifier]
+        let mut input = posix_str.as_str();
+
+        // Extract modifier (@...)
+        let modifier = if let Some(pos) = input.find('@') {
+            let m = &input[pos + 1..];
+            input = &input[..pos];
+            Some(m)
+        } else {
+            None
+        };
+
+        // Remove codeset (....)
+        if let Some(pos) = input.find('.') {
+            input = &input[..pos];
+        }
+
+        // Parse language_territory
+        let parts: Vec<&str> = input.split('_').collect();
+        let language = match parts.first() {
+            Some(lang) if !lang.is_empty() => *lang,
+            _ => {
+                return Err(Error::new(
+                    Self::locale_error_class(ruby),
+                    format!("Invalid POSIX locale: {}", posix_str),
+                ));
+            }
+        };
+        let territory = parts.get(1).filter(|t| !t.is_empty());
+
+        // Build BCP 47 string
+        let mut bcp47 = language.to_lowercase();
+
+        // Handle script from modifier
+        if let Some(m) = modifier {
+            match m.to_lowercase().as_str() {
+                "latin" => bcp47.push_str("-Latn"),
+                "cyrillic" => bcp47.push_str("-Cyrl"),
+                _ => {} // Other modifiers are ignored
+            }
+        }
+
+        if let Some(t) = territory {
+            bcp47.push('-');
+            bcp47.push_str(&t.to_uppercase());
+        }
+
+        Self::parse(ruby, bcp47)
     }
 
     /// Get the language component
@@ -96,6 +172,7 @@ impl Locale {
 pub fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
     let class = module.define_class("Locale", ruby.class_object())?;
     class.define_singleton_method("parse", function!(Locale::parse, 1))?;
+    class.define_singleton_method("parse_posix", function!(Locale::parse_posix, 1))?;
     class.define_method("language", method!(Locale::language, 0))?;
     class.define_method("script", method!(Locale::script, 0))?;
     class.define_method("region", method!(Locale::region, 0))?;

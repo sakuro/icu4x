@@ -32,6 +32,12 @@ module ICU4X
     # @raise [LocaleError] If the format is invalid
     def self.parse(locale_str) = ...
 
+    # Parse a POSIX locale string
+    # @param posix_str [String] Locale string in POSIX format (e.g., "ja_JP.UTF-8")
+    # @return [Locale]
+    # @raise [LocaleError] If the format is invalid
+    def self.parse_posix(posix_str) = ...
+
     # Language code
     # @return [String, nil]
     def language = ...
@@ -72,6 +78,7 @@ end
 ### Usage Examples
 
 ```ruby
+# Parse BCP 47 format
 loc = ICU4X::Locale.parse("ja-JP")
 loc.language  # => "ja"
 loc.region    # => "JP"
@@ -80,6 +87,20 @@ loc.to_s      # => "ja-JP"
 
 loc2 = ICU4X::Locale.parse("en-Latn-US")
 loc2.script   # => "Latn"
+
+# Parse POSIX format
+loc3 = ICU4X::Locale.parse_posix("ja_JP.UTF-8")
+loc3.language  # => "ja"
+loc3.region    # => "JP"
+loc3.to_s      # => "ja-JP"
+
+# POSIX modifiers @latin/@cyrillic are converted to script codes
+loc4 = ICU4X::Locale.parse_posix("sr_RS@latin")
+loc4.script    # => "Latn"
+
+# C and POSIX locales become undetermined (und)
+loc5 = ICU4X::Locale.parse_posix("C")
+loc5.to_s      # => "und"
 
 # Locales can be used as Hash keys
 cache = {}

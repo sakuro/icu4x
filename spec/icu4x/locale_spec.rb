@@ -26,8 +26,8 @@ RSpec.describe ICU4X::Locale do
       expect(locale.region).to eq("CN")
     end
 
-    it "raises ArgumentError for invalid locale string" do
-      expect { ICU4X::Locale.parse("!!!invalid") }.to raise_error(ArgumentError, /Invalid locale/)
+    it "raises LocaleError for invalid locale string" do
+      expect { ICU4X::Locale.parse("!!!invalid") }.to raise_error(ICU4X::LocaleError, /Invalid locale/)
     end
   end
 
@@ -108,6 +108,82 @@ RSpec.describe ICU4X::Locale do
       locale = ICU4X::Locale.parse("en-US-x-custom")
 
       expect(locale.extensions[:private]).to eq(["custom"])
+    end
+  end
+
+  describe ".parse_posix" do
+    it "parses basic POSIX locale with codeset" do
+      locale = ICU4X::Locale.parse_posix("ja_JP.UTF-8")
+
+      expect(locale.language).to eq("ja")
+      expect(locale.region).to eq("JP")
+      expect(locale.script).to be_nil
+    end
+
+    it "parses locale without codeset" do
+      locale = ICU4X::Locale.parse_posix("en_US")
+
+      expect(locale.language).to eq("en")
+      expect(locale.region).to eq("US")
+    end
+
+    it "parses locale with @latin modifier" do
+      locale = ICU4X::Locale.parse_posix("sr_RS@latin")
+
+      expect(locale.language).to eq("sr")
+      expect(locale.script).to eq("Latn")
+      expect(locale.region).to eq("RS")
+    end
+
+    it "parses locale with @cyrillic modifier" do
+      locale = ICU4X::Locale.parse_posix("sr_RS@cyrillic")
+
+      expect(locale.language).to eq("sr")
+      expect(locale.script).to eq("Cyrl")
+      expect(locale.region).to eq("RS")
+    end
+
+    it "ignores unknown modifiers" do
+      locale = ICU4X::Locale.parse_posix("de_DE@euro")
+
+      expect(locale.language).to eq("de")
+      expect(locale.region).to eq("DE")
+      expect(locale.script).to be_nil
+    end
+
+    it "handles C locale as undetermined" do
+      locale = ICU4X::Locale.parse_posix("C")
+
+      expect(locale.language).to be_nil
+      expect(locale.to_s).to eq("und")
+      expect(locale.region).to be_nil
+    end
+
+    it "handles POSIX locale as undetermined" do
+      locale = ICU4X::Locale.parse_posix("POSIX")
+
+      expect(locale.language).to be_nil
+      expect(locale.to_s).to eq("und")
+      expect(locale.region).to be_nil
+    end
+
+    it "parses language-only locale" do
+      locale = ICU4X::Locale.parse_posix("ja")
+
+      expect(locale.language).to eq("ja")
+      expect(locale.region).to be_nil
+    end
+
+    it "handles codeset and modifier together" do
+      locale = ICU4X::Locale.parse_posix("sr_RS.UTF-8@latin")
+
+      expect(locale.language).to eq("sr")
+      expect(locale.script).to eq("Latn")
+      expect(locale.region).to eq("RS")
+    end
+
+    it "raises LocaleError for empty string" do
+      expect { ICU4X::Locale.parse_posix("") }.to raise_error(ICU4X::LocaleError)
     end
   end
 end
