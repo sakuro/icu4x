@@ -1,19 +1,46 @@
 # frozen_string_literal: true
 
 require "zeitwerk"
+require_relative "icu4x/icu4x" # Native extension
 require_relative "icu4x/version"
 
-# Icu4x provides [description of your gem].
+# ICU4X provides Ruby bindings for ICU4X, a Unicode library.
 #
 # This module serves as the namespace for the gem's functionality.
-module Icu4x
+module ICU4X
+  # Base error class for all ICU4X errors
   class Error < StandardError; end
 
+  # Error raised when locale parsing fails
+  class LocaleError < Error; end
+
+  # Error raised when data loading fails
+  class DataError < Error; end
+
+  # Error raised when data generation fails
+  class DataGeneratorError < Error; end
+
   loader = Zeitwerk::Loader.for_gem
+  loader.inflector.inflect("icu4x" => "ICU4X")
   loader.ignore("#{__dir__}/icu4x/version.rb")
-  # loader.inflector.inflect(
-  #   "html" => "HTML",
-  #   "ssl" => "SSL"
-  # )
+  loader.ignore("#{__dir__}/icu4x/icu4x.bundle")
+  loader.ignore("#{__dir__}/icu4x/icu4x.so")
+  loader.ignore("#{__dir__}/icu4x/icu4x.dll")
   loader.setup
+end
+
+# Enhance the native Locale class
+module ICU4X
+  # Represents a BCP 47 locale identifier.
+  class Locale
+    # @return [String] Human-readable representation
+    def inspect = "#<ICU4X::Locale:#{self}>"
+
+    # @return [Integer] Hash code for use as Hash key
+    def hash = to_s.hash
+
+    # @param other [Locale] Another locale to compare
+    # @return [Boolean] True if locales are equal
+    def eql?(other) = self == other
+  end
 end

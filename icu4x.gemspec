@@ -4,7 +4,7 @@ require_relative "lib/icu4x/version"
 
 Gem::Specification.new do |spec|
   spec.name = "icu4x"
-  spec.version = Icu4x::VERSION
+  spec.version = ICU4X::VERSION
   spec.authors = ["OZAWA Sakuro"]
   spec.email = ["10973+sakuro@users.noreply.github.com"]
 
@@ -21,17 +21,20 @@ Gem::Specification.new do |spec|
 
   spec.files = Dir.chdir(File.expand_path(__dir__)) {
     Dir[
-      "lib/**/*.rb",
-      "exe/*",
-      "sig/**/*.rbs",
-      "LICENSE*.txt",
+      "lib/icu4x.rb",
+      "lib/icu4x/**/*.rb",
+      "ext/icu4x/extconf.rb",
+      "ext/icu4x/Cargo.toml",
+      "ext/icu4x/**/*.rs",
+      "sig/icu4x.rbs",
+      "LICENSE.txt",
       "README.md",
       "CHANGELOG.md"
     ]
   }
-  spec.bindir = "exe"
-  spec.executables = spec.files.grep(%r{\Aexe/}) {|f| File.basename(f) }
   spec.require_paths = ["lib"]
+  spec.extensions = ["ext/icu4x/extconf.rb"]
 
+  spec.add_dependency "rb_sys", "~> 0.9"
   spec.add_dependency "zeitwerk", "~> 2.7"
 end
