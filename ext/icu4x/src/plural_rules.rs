@@ -1,8 +1,9 @@
 use crate::data_provider::DataProvider;
 use crate::locale::Locale;
-use crate::locale_fallback_provider::LocaleFallbackProvider;
 use fixed_decimal::Decimal;
-use icu::plurals::{PluralCategory, PluralRuleType, PluralRules as IcuPluralRules, PluralRulesPreferences};
+use icu::plurals::{
+    PluralCategory, PluralRuleType, PluralRules as IcuPluralRules, PluralRulesPreferences,
+};
 use icu_provider::buf::AsDeserializingBufferProvider;
 use magnus::{
     function, method, prelude::*, Error, ExceptionClass, RArray, RHash, RModule, Ruby, Symbol,
@@ -25,7 +26,7 @@ impl PluralRules {
     ///
     /// # Arguments
     /// * `locale` - A Locale instance
-    /// * `provider:` - A DataProvider or LocaleFallbackProvider instance
+    /// * `provider:` - A DataProvider instance
     /// * `type:` - :cardinal (default) or :ordinal
     fn new(ruby: &Ruby, args: &[Value]) -> Result<Self, Error> {
         // Parse arguments: (locale, **kwargs)
@@ -63,7 +64,8 @@ impl PluralRules {
             .ok_or_else(|| Error::new(ruby.exception_arg_error(), "missing keyword: :provider"))?;
 
         // Extract type option (default: :cardinal)
-        let type_value: Option<Symbol> = kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("type"))?;
+        let type_value: Option<Symbol> =
+            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("type"))?;
         let cardinal_sym = ruby.to_symbol("cardinal");
         let ordinal_sym = ruby.to_symbol("ordinal");
         let type_sym = type_value.unwrap_or(cardinal_sym);
@@ -84,68 +86,28 @@ impl PluralRules {
             .eval("ICU4X::Error")
             .unwrap_or_else(|_| ruby.exception_runtime_error());
 
-        // Try to create PluralRules from DataProvider
-        if let Ok(dp) = <&DataProvider>::try_convert(provider_value) {
-            let inner_ref = dp.inner.borrow();
-            if let Some(ref blob_provider) = *inner_ref {
-                let rules = match rule_type {
-                    PluralRuleType::Cardinal => IcuPluralRules::try_new_cardinal_unstable(
-                        &blob_provider.as_deserializing(),
-                        prefs,
-                    ),
-                    PluralRuleType::Ordinal => IcuPluralRules::try_new_ordinal_unstable(
-                        &blob_provider.as_deserializing(),
-                        prefs,
-                    ),
-                    _ => IcuPluralRules::try_new_cardinal_unstable(
-                        &blob_provider.as_deserializing(),
-                        prefs,
-                    ),
-                }
-                .map_err(|e| Error::new(error_class, format!("Failed to create PluralRules: {}", e)))?;
+        // Get the DataProvider
+        let dp: &DataProvider = TryConvert::try_convert(provider_value).map_err(|_| {
+            Error::new(ruby.exception_type_error(), "provider must be a DataProvider")
+        })?;
 
-                return Ok(Self {
-                    inner: rules,
-                    locale_str,
-                    rule_type,
-                });
-            } else {
-                return Err(Error::new(
-                    ruby.exception_arg_error(),
-                    "DataProvider has already been consumed",
-                ));
+        // Create PluralRules from DataProvider
+        let rules = match rule_type {
+            PluralRuleType::Cardinal => {
+                IcuPluralRules::try_new_cardinal_unstable(&dp.inner.as_deserializing(), prefs)
             }
-        }
-
-        // Try to create PluralRules from LocaleFallbackProvider
-        if let Ok(lfp) = <&LocaleFallbackProvider>::try_convert(provider_value) {
-            let rules = match rule_type {
-                PluralRuleType::Cardinal => IcuPluralRules::try_new_cardinal_unstable(
-                    &lfp.inner.as_deserializing(),
-                    prefs,
-                ),
-                PluralRuleType::Ordinal => IcuPluralRules::try_new_ordinal_unstable(
-                    &lfp.inner.as_deserializing(),
-                    prefs,
-                ),
-                _ => IcuPluralRules::try_new_cardinal_unstable(
-                    &lfp.inner.as_deserializing(),
-                    prefs,
-                ),
+            PluralRuleType::Ordinal => {
+                IcuPluralRules::try_new_ordinal_unstable(&dp.inner.as_deserializing(), prefs)
             }
-            .map_err(|e| Error::new(error_class, format!("Failed to create PluralRules: {}", e)))?;
-
-            return Ok(Self {
-                inner: rules,
-                locale_str,
-                rule_type,
-            });
+            _ => IcuPluralRules::try_new_cardinal_unstable(&dp.inner.as_deserializing(), prefs),
         }
+        .map_err(|e| Error::new(error_class, format!("Failed to create PluralRules: {}", e)))?;
 
-        Err(Error::new(
-            ruby.exception_type_error(),
-            "provider must be a DataProvider or LocaleFallbackProvider",
-        ))
+        Ok(Self {
+            inner: rules,
+            locale_str,
+            rule_type,
+        })
     }
 
     /// Determine the plural category for a number

@@ -30,18 +30,6 @@ RSpec.describe ICU4X::PluralRules do
       end
     end
 
-    context "with LocaleFallbackProvider" do
-      let(:data_provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
-      let(:fallback_provider) { ICU4X::LocaleFallbackProvider.new(data_provider) }
-      let(:locale) { ICU4X::Locale.parse("en") }
-
-      it "creates a PluralRules instance" do
-        rules = ICU4X::PluralRules.new(locale, provider: fallback_provider)
-
-        expect(rules).to be_a(ICU4X::PluralRules)
-      end
-    end
-
     context "with invalid arguments" do
       let(:provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
       let(:locale) { ICU4X::Locale.parse("en") }
@@ -58,7 +46,7 @@ RSpec.describe ICU4X::PluralRules do
 
       it "raises TypeError when provider is invalid type" do
         expect { ICU4X::PluralRules.new(locale, provider: "not a provider") }
-          .to raise_error(TypeError, /provider must be a DataProvider or LocaleFallbackProvider/)
+          .to raise_error(TypeError, /provider must be a DataProvider/)
       end
     end
   end
@@ -115,10 +103,9 @@ RSpec.describe ICU4X::PluralRules do
       end
     end
 
-    context "with Japanese (ja) using LocaleFallbackProvider" do
-      let(:data_provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
-      let(:fallback_provider) { ICU4X::LocaleFallbackProvider.new(data_provider) }
-      let(:rules) { ICU4X::PluralRules.new(ICU4X::Locale.parse("ja"), provider: fallback_provider, type: :cardinal) }
+    context "with Japanese (ja)" do
+      let(:provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
+      let(:rules) { ICU4X::PluralRules.new(ICU4X::Locale.parse("ja"), provider:, type: :cardinal) }
 
       it "returns :other for all numbers" do
         [0, 1, 2, 5, 10, 100].each do |n|
@@ -229,10 +216,9 @@ RSpec.describe ICU4X::PluralRules do
       expect(rules.categories).to contain_exactly(:one, :other)
     end
 
-    it "returns available categories for Japanese cardinal using LocaleFallbackProvider" do
-      data_provider = ICU4X::DataProvider.from_blob(valid_blob_path)
-      fallback_provider = ICU4X::LocaleFallbackProvider.new(data_provider)
-      rules = ICU4X::PluralRules.new(ICU4X::Locale.parse("ja"), provider: fallback_provider, type: :cardinal)
+    it "returns available categories for Japanese cardinal" do
+      provider = ICU4X::DataProvider.from_blob(valid_blob_path)
+      rules = ICU4X::PluralRules.new(ICU4X::Locale.parse("ja"), provider:, type: :cardinal)
 
       expect(rules.categories).to contain_exactly(:other)
     end
@@ -261,10 +247,9 @@ RSpec.describe ICU4X::PluralRules do
       expect(rules.resolved_options).to eq({locale: "en", type: :cardinal})
     end
 
-    it "returns locale and type for ordinal using LocaleFallbackProvider" do
-      data_provider = ICU4X::DataProvider.from_blob(valid_blob_path)
-      fallback_provider = ICU4X::LocaleFallbackProvider.new(data_provider)
-      rules = ICU4X::PluralRules.new(ICU4X::Locale.parse("ja"), provider: fallback_provider, type: :ordinal)
+    it "returns locale and type for ordinal" do
+      provider = ICU4X::DataProvider.from_blob(valid_blob_path)
+      rules = ICU4X::PluralRules.new(ICU4X::Locale.parse("ja"), provider:, type: :ordinal)
 
       expect(rules.resolved_options).to eq({locale: "ja", type: :ordinal})
     end

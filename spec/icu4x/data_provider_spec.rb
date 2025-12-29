@@ -9,8 +9,20 @@ RSpec.describe ICU4X::DataProvider do
 
   describe ".from_blob" do
     context "with a valid blob file" do
-      it "creates a DataProvider instance" do
+      it "creates a DataProvider instance with default priority" do
         provider = ICU4X::DataProvider.from_blob(valid_blob_path)
+
+        expect(provider).to be_a(ICU4X::DataProvider)
+      end
+
+      it "creates a DataProvider instance with :language priority" do
+        provider = ICU4X::DataProvider.from_blob(valid_blob_path, priority: :language)
+
+        expect(provider).to be_a(ICU4X::DataProvider)
+      end
+
+      it "creates a DataProvider instance with :region priority" do
+        provider = ICU4X::DataProvider.from_blob(valid_blob_path, priority: :region)
 
         expect(provider).to be_a(ICU4X::DataProvider)
       end
@@ -32,6 +44,13 @@ RSpec.describe ICU4X::DataProvider do
       it "raises TypeError for nil" do
         expect { ICU4X::DataProvider.from_blob(nil) }
           .to raise_error(TypeError, /expected Pathname, got NilClass/)
+      end
+    end
+
+    context "with invalid priority" do
+      it "raises ArgumentError for unknown priority symbol" do
+        expect { ICU4X::DataProvider.from_blob(valid_blob_path, priority: :unknown) }
+          .to raise_error(ArgumentError, /priority must be :language or :region/)
       end
     end
 

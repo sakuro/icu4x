@@ -14,11 +14,7 @@ module ICU4X
   end
 
   class DataProvider
-    def self.from_blob: (Pathname path) -> DataProvider
-  end
-
-  class LocaleFallbackProvider
-    def self.new: (DataProvider provider, ?priority: :language | :region) -> LocaleFallbackProvider
+    def self.from_blob: (Pathname path, ?priority: :language | :region) -> DataProvider
   end
 
   class DataGenerator
@@ -44,7 +40,7 @@ module ICU4X
   type plural_rule_type = :cardinal | :ordinal
 
   class PluralRules
-    def self.new: (Locale locale, provider: DataProvider | LocaleFallbackProvider, ?type: plural_rule_type) -> PluralRules
+    def self.new: (Locale locale, provider: DataProvider, ?type: plural_rule_type) -> PluralRules
 
     def select: (Integer | Float number) -> plural_category
     def categories: () -> Array[plural_category]

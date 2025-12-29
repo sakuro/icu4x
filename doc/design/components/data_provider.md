@@ -2,7 +2,7 @@
 
 ## Overview
 
-DataProvider is a component that abstracts "where" and "in what format" locale data required by ICU4X is supplied. Formatters (DateTimeFormat, NumberFormat, PluralRules) depend only on DataProvider and are unaware of the data source.
+DataProvider is a component that abstracts "where" and "in what format" locale data required by ICU4X is supplied. It includes built-in locale fallback support. Formatters (DateTimeFormat, NumberFormat, PluralRules) depend only on DataProvider and are unaware of the data source.
 
 ---
 
@@ -18,14 +18,8 @@ ICU4X is a library that provides internationalization functionality, with a desi
                        │ Data request
                        ▼
 ┌─────────────────────────────────────────────────────┐
-│  LocaleFallbackProvider (optional wrapper)          │
-│  └─ Provides locale fallback (ja-JP → ja → und)     │
-└──────────────────────┬──────────────────────────────┘
-                       │
-                       ▼
-┌─────────────────────────────────────────────────────┐
-│  DataProvider (abstraction layer)                   │
-│  └─ Abstracts "what" and "where" to retrieve        │
+│  DataProvider (with locale fallback)                │
+│  └─ Abstracts data source + fallback support        │
 └──────────────────────┬──────────────────────────────┘
                        │
         ┌──────────────┼──────────────┐
@@ -92,13 +86,13 @@ dtf = ICU4X::DateTimeFormat.new(
 dtf.format(Time.now)  # => "2025年12月28日"
 ```
 
-**Note**: Provider must always be explicitly specified. For locale fallback support, wrap with `LocaleFallbackProvider`.
+**Note**: Provider must always be explicitly specified. Locale fallback is built-in.
 
 ---
 
 ## Locale Fallback Support
 
-When data for a specific locale is not available, ICU4X can fall back through the locale hierarchy. This is achieved by wrapping `DataProvider` with `LocaleFallbackProvider`.
+DataProvider includes built-in locale fallback support. When data for a specific locale is not available, it automatically falls back through the locale hierarchy.
 
 ### Fallback Chain
 
@@ -112,22 +106,6 @@ ja
 und
 ```
 
-### Usage
-
-```ruby
-provider = ICU4X::DataProvider.from_blob(Pathname.new("path/to/data.blob"))
-
-# Wrap with fallback support
-fallback_provider = ICU4X::LocaleFallbackProvider.new(provider)
-
-# Now formatters will automatically fall back through the locale hierarchy
-dtf = ICU4X::DateTimeFormat.new(
-  ICU4X::Locale.parse("ja-JP"),
-  provider: fallback_provider,
-  date_style: :long
-)
-```
-
 ### Fallback Priority
 
 | Priority | Description | Example |
@@ -136,13 +114,15 @@ dtf = ICU4X::DateTimeFormat.new(
 | `:region` | Prioritizes region similarity | `ja-JP` → `und-JP` → `und` |
 
 ```ruby
+# Default (language priority)
+provider = ICU4X::DataProvider.from_blob(Pathname.new("path/to/data.blob"))
+
 # Region-priority fallback
-fallback_provider = ICU4X::LocaleFallbackProvider.new(provider, priority: :region)
+provider = ICU4X::DataProvider.from_blob(Pathname.new("path/to/data.blob"), priority: :region)
 ```
 
 ### Important Notes
 
-- `LocaleFallbackProvider.new` **consumes** the `DataProvider`. The original provider cannot be reused.
 - Fallback follows the locale hierarchy, not arbitrary language preferences.
   - Example: `ja` will NOT fall back to `en`. It falls back to `und` (undetermined).
 - For data to be available via fallback, it must be included when generating the blob file.
