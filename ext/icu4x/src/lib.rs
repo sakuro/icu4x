@@ -1,3 +1,4 @@
+mod collator;
 mod data_generator;
 mod data_provider;
 mod datetime_format;
@@ -19,6 +20,7 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     number_format::init(ruby, &module)?;
     datetime_format::init(ruby, &module)?;
     list_format::init(ruby, &module)?;
+    collator::init(ruby, &module)?;
 
     Ok(())
 }
