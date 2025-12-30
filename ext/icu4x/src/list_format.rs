@@ -1,11 +1,11 @@
 use crate::data_provider::DataProvider;
 use crate::locale::Locale;
-use icu::list::options::{ListFormatterOptions, ListLength};
 use icu::list::ListFormatter;
+use icu::list::options::{ListFormatterOptions, ListLength};
 use icu_provider::buf::AsDeserializingBufferProvider;
 use magnus::{
-    function, method, prelude::*, Error, ExceptionClass, RArray, RHash, RModule, Ruby, Symbol,
-    TryConvert, Value,
+    Error, ExceptionClass, RArray, RHash, RModule, Ruby, Symbol, TryConvert, Value, function,
+    method, prelude::*,
 };
 
 /// The type of list formatting
