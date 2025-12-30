@@ -99,4 +99,23 @@ module ICU4X
       ?time_zone: String
     }
   end
+
+  type list_format_type = :conjunction | :disjunction | :unit
+  type list_format_style = :long | :short | :narrow
+
+  class ListFormat
+    def self.new: (
+      Locale locale,
+      provider: DataProvider,
+      ?type: list_format_type,
+      ?style: list_format_style
+    ) -> ListFormat
+
+    def format: (Array[String] list) -> String
+    def resolved_options: () -> {
+      locale: String,
+      type: list_format_type,
+      style: list_format_style
+    }
+  end
 end
