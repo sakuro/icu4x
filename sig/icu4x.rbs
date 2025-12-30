@@ -103,6 +103,9 @@ module ICU4X
   type list_format_type = :conjunction | :disjunction | :unit
   type list_format_style = :long | :short | :narrow
 
+  type collator_sensitivity = :base | :accent | :case | :variant
+  type collator_case_first = :upper | :lower
+
   class ListFormat
     def self.new: (
       Locale locale,
@@ -116,6 +119,24 @@ module ICU4X
       locale: String,
       type: list_format_type,
       style: list_format_style
+    }
+  end
+
+  class Collator
+    def self.new: (
+      Locale locale,
+      provider: DataProvider,
+      ?sensitivity: collator_sensitivity,
+      ?numeric: bool,
+      ?case_first: collator_case_first
+    ) -> Collator
+
+    def compare: (String a, String b) -> Integer
+    def resolved_options: () -> {
+      locale: String,
+      sensitivity: collator_sensitivity,
+      numeric: bool,
+      ?case_first: collator_case_first
     }
   end
 end
