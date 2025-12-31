@@ -20,6 +20,32 @@ module ICU4X
   class DataGeneratorError < Error; end
 end
 
+# Define Segment data class for Segmenter
+module ICU4X
+  class Segmenter
+    Segment = Data.define(:segment, :index, :word_like)
+  end
+end
+
+# Enhance the Segment data class
+module ICU4X
+  class Segmenter
+    # Represents a segment of text.
+    #
+    # @!attribute [r] segment
+    #   @return [String] The segment string
+    # @!attribute [r] index
+    #   @return [Integer] Byte offset in original text
+    class Segment
+      # Whether this segment is word-like.
+      # @return [Boolean] true if word-like (letters, numbers, CJK ideographs)
+      # @return [nil] for non-word granularity
+      alias word_like? word_like
+      private :word_like
+    end
+  end
+end
+
 # Enhance the native Locale class
 module ICU4X
   # Represents a BCP 47 locale identifier.

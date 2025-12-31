@@ -161,4 +161,23 @@ module ICU4X
       fallback: display_names_fallback
     }
   end
+
+  type segmenter_granularity = :grapheme | :word | :sentence | :line
+
+  class Segmenter
+    class Segment
+      attr_reader segment: String
+      attr_reader index: Integer
+
+      def word_like?: () -> bool?
+    end
+
+    def self.new: (
+      granularity: segmenter_granularity,
+      ?provider: DataProvider
+    ) -> Segmenter
+
+    def segment: (String text) -> Array[Segment]
+    def resolved_options: () -> { granularity: segmenter_granularity }
+  end
 end

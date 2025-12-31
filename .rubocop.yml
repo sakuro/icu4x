@@ -36,6 +36,12 @@ inherit_gem:
 inherit_from: .rubocop_todo.yml
 
 # Project-specific settings
+
+# Native extension classes appear static from Ruby side but have methods defined in Rust
+Style/StaticClass:
+  Exclude:
+    - lib/icu4x.rb
+
 RSpec/SpecFilePathFormat:
   CustomTransform:
     ICU4X: icu4x
