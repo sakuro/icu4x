@@ -54,9 +54,9 @@ RSpec.describe ICU4X::DateTimeFormat do
           .to raise_error(ArgumentError, /time_style must be :full, :long, :medium, or :short/)
       end
 
-      it "raises ArgumentError when calendar is not :gregory" do
-        expect { ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, calendar: :japanese) }
-          .to raise_error(ArgumentError, /only :gregory calendar is currently supported/)
+      it "raises ArgumentError when calendar is invalid" do
+        expect { ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, calendar: :invalid) }
+          .to raise_error(ArgumentError, /calendar must be/)
       end
 
       it "raises ArgumentError when time_zone is invalid" do
@@ -256,6 +256,140 @@ RSpec.describe ICU4X::DateTimeFormat do
       formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, time_zone: "Asia/Tokyo")
 
       expect(formatter.resolved_options).to include(time_zone: "Asia/Tokyo")
+    end
+
+    it "returns specified calendar" do
+      formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, calendar: :japanese)
+
+      expect(formatter.resolved_options).to include(calendar: :japanese)
+    end
+  end
+
+  describe "calendar support" do
+    let(:locale) { ICU4X::Locale.parse("en-US") }
+    let(:test_time) { Time.utc(2025, 12, 28) }
+
+    context "with :japanese calendar" do
+      it "creates formatter with Japanese calendar" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, calendar: :japanese)
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+        expect(formatter.resolved_options[:calendar]).to eq(:japanese)
+      end
+
+      it "formats date in Japanese era" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, calendar: :japanese)
+
+        result = formatter.format(test_time)
+
+        expect(result).to include("Reiwa")
+      end
+    end
+
+    context "with :buddhist calendar" do
+      it "creates formatter with Buddhist calendar" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, calendar: :buddhist)
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+        expect(formatter.resolved_options[:calendar]).to eq(:buddhist)
+      end
+
+      it "formats date in Buddhist era (BE 2568 for 2025 CE)" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, calendar: :buddhist)
+
+        result = formatter.format(test_time)
+
+        expect(result).to include("2568")
+      end
+    end
+
+    context "with :hebrew calendar" do
+      it "creates formatter with Hebrew calendar" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, calendar: :hebrew)
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+        expect(formatter.resolved_options[:calendar]).to eq(:hebrew)
+      end
+    end
+
+    context "with :chinese calendar" do
+      it "creates formatter with Chinese calendar" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, calendar: :chinese)
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+        expect(formatter.resolved_options[:calendar]).to eq(:chinese)
+      end
+    end
+
+    context "with :coptic calendar" do
+      it "creates formatter with Coptic calendar" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, calendar: :coptic)
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+        expect(formatter.resolved_options[:calendar]).to eq(:coptic)
+      end
+    end
+
+    context "with :ethiopian calendar" do
+      it "creates formatter with Ethiopian calendar" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, calendar: :ethiopian)
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+        expect(formatter.resolved_options[:calendar]).to eq(:ethiopian)
+      end
+    end
+
+    context "with :indian calendar" do
+      it "creates formatter with Indian calendar" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, calendar: :indian)
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+        expect(formatter.resolved_options[:calendar]).to eq(:indian)
+      end
+    end
+
+    context "with :islamic calendar" do
+      it "creates formatter with Islamic calendar" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, calendar: :islamic)
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+        expect(formatter.resolved_options[:calendar]).to eq(:islamic)
+      end
+    end
+
+    context "with :persian calendar" do
+      it "creates formatter with Persian calendar" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, calendar: :persian)
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+        expect(formatter.resolved_options[:calendar]).to eq(:persian)
+      end
+    end
+
+    context "with :roc calendar" do
+      it "creates formatter with ROC calendar" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, calendar: :roc)
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+        expect(formatter.resolved_options[:calendar]).to eq(:roc)
+      end
+
+      it "formats date in ROC era (114 for 2025 CE)" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, calendar: :roc)
+
+        result = formatter.format(test_time)
+
+        expect(result).to include("114")
+      end
+    end
+
+    context "with :dangi calendar" do
+      it "creates formatter with Dangi calendar" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, calendar: :dangi)
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+        expect(formatter.resolved_options[:calendar]).to eq(:dangi)
+      end
     end
   end
 end
