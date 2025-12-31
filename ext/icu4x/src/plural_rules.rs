@@ -1,4 +1,5 @@
 use crate::data_provider::DataProvider;
+use crate::helpers;
 use crate::locale::Locale;
 use fixed_decimal::Decimal;
 use icu::plurals::{
@@ -55,25 +56,8 @@ impl PluralRules {
             ruby.hash_new()
         };
 
-        // Extract provider (optional, falls back to default)
-        let provider_value: Option<Value> =
-            kwargs.lookup::<_, Option<Value>>(ruby.to_symbol("provider"))?;
-
         // Resolve provider: use explicit or fall back to default
-        let resolved_provider: Value = match provider_value {
-            Some(v) if !v.is_nil() => v,
-            _ => {
-                let icu4x_module: RModule = ruby.eval("ICU4X")?;
-                let default: Value = icu4x_module.funcall("default_provider", ())?;
-                if default.is_nil() {
-                    return Err(Error::new(
-                        ruby.exception_arg_error(),
-                        "No provider specified and no default configured. Set ICU4X_DATA_PATH environment variable or use ICU4X.configure.",
-                    ));
-                }
-                default
-            }
-        };
+        let resolved_provider = helpers::resolve_provider(ruby, &kwargs)?;
 
         // Extract type option (default: :cardinal)
         let type_value: Option<Symbol> =
