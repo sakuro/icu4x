@@ -200,7 +200,7 @@ impl ListFormat {
 
         let items: Vec<String> = array
             .into_iter()
-            .map(|v| TryConvert::try_convert(v))
+            .map(TryConvert::try_convert)
             .collect::<Result<Vec<_>, _>>()?;
 
         let formatted = self.inner.format(items.iter().map(|s| s.as_str()));
