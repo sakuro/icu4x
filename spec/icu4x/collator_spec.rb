@@ -54,13 +54,38 @@ RSpec.describe ICU4X::Collator do
       end
     end
 
+    context "with optional provider" do
+      let(:locale) { ICU4X::Locale.parse("en") }
+
+      around do |example|
+        original_env = ENV.fetch("ICU4X_DATA_PATH", nil)
+        ENV["ICU4X_DATA_PATH"] = valid_blob_path.to_s
+        example.run
+      ensure
+        ENV["ICU4X_DATA_PATH"] = original_env
+      end
+
+      it "uses default provider when provider is not specified" do
+        collator = ICU4X::Collator.new(locale)
+        expect(collator.compare("a", "b")).to eq(-1)
+      end
+    end
+
     context "with invalid arguments" do
       let(:provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
       let(:locale) { ICU4X::Locale.parse("en") }
 
-      it "raises ArgumentError when missing provider keyword" do
+      around do |example|
+        original_env = ENV.fetch("ICU4X_DATA_PATH", nil)
+        ENV.delete("ICU4X_DATA_PATH")
+        example.run
+      ensure
+        ENV["ICU4X_DATA_PATH"] = original_env
+      end
+
+      it "raises ArgumentError when no provider is available" do
         expect { ICU4X::Collator.new(locale) }
-          .to raise_error(ArgumentError, /missing keyword: :provider/)
+          .to raise_error(ArgumentError, /No provider specified and no default configured/)
       end
 
       it "raises ArgumentError for invalid sensitivity" do
