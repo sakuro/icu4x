@@ -14,6 +14,37 @@ ICU4X
 
 ---
 
+## Data Contents
+
+Data supplied by DataProvider is derived from **CLDR (Common Locale Data Repository)**:
+
+| Category | Content Examples |
+|----------|------------------|
+| datetime | Month names, weekday names, date patterns, timezone names |
+| number | Digit symbols, currency symbols, percent format |
+| plurals | Plural rules (one/few/many/other determination per language) |
+| calendar | Calendar systems (Gregorian, Japanese, etc.) |
+
+---
+
+## Data Supply Approach
+
+**User-generated data approach** is adopted:
+
+1. Users generate data using `ICU4X::DataGenerator` API
+2. Place generated blob file in application
+3. Load at runtime with `DataProvider.from_blob`
+
+| Traditional Approach | This Design |
+|---------------------|-------------|
+| Bundle all locale data with gem | Users generate only what they need |
+| Bloated gem size (tens of MB) | Minimal (KB to few MB) |
+| Includes unused locales | Optimized for application |
+
+**Trade-off**: Requires users to generate data, but significant benefits in gem size and flexibility.
+
+---
+
 ## ICU4X::DataProvider
 
 A class that provides locale data to formatters.
@@ -133,37 +164,6 @@ Use `DataGenerator.available_markers` to list all available markers, or specify 
 ICU4X::DataGenerator.available_markers
 # => ["CalendarJapaneseExtendedV1", "CalendarJapaneseModernV1", "CalendarWeekV1", ...]
 ```
-
----
-
-## Data Contents
-
-Data supplied by DataProvider is derived from **CLDR (Common Locale Data Repository)**:
-
-| Category | Content Examples |
-|----------|------------------|
-| datetime | Month names, weekday names, date patterns, timezone names |
-| number | Digit symbols, currency symbols, percent format |
-| plurals | Plural rules (one/few/many/other determination per language) |
-| calendar | Calendar systems (Gregorian, Japanese, etc.) |
-
----
-
-## Data Supply Approach
-
-**User-generated data approach** is adopted:
-
-1. Users generate data using `ICU4X::DataGenerator` API
-2. Place generated blob file in application
-3. Load at runtime with `DataProvider.from_blob`
-
-| Traditional Approach | This Design |
-|---------------------|-------------|
-| Bundle all locale data with gem | Users generate only what they need |
-| Bloated gem size (tens of MB) | Minimal (KB to few MB) |
-| Includes unused locales | Optimized for application |
-
-**Trade-off**: Requires users to generate data, but significant benefits in gem size and flexibility.
 
 ---
 
