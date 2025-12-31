@@ -1,5 +1,10 @@
 module ICU4X
+  extend Dry::Configurable
+
   VERSION: String
+
+  def self.default_provider: () -> DataProvider?
+  def self.reset_default_provider!: () -> void
 
   class Error < StandardError
   end
@@ -41,7 +46,7 @@ module ICU4X
   type plural_rule_type = :cardinal | :ordinal
 
   class PluralRules
-    def self.new: (Locale locale, provider: DataProvider, ?type: plural_rule_type) -> PluralRules
+    def self.new: (Locale locale, ?provider: DataProvider, ?type: plural_rule_type) -> PluralRules
 
     def select: (Integer | Float number) -> plural_category
     def categories: () -> Array[plural_category]
@@ -58,7 +63,7 @@ module ICU4X
   class NumberFormat
     def self.new: (
       Locale locale,
-      provider: DataProvider,
+      ?provider: DataProvider,
       ?style: number_format_style,
       ?currency: String,
       ?use_grouping: bool,
@@ -84,7 +89,7 @@ module ICU4X
   class DateTimeFormat
     def self.new: (
       Locale locale,
-      provider: DataProvider,
+      ?provider: DataProvider,
       ?date_style: date_style,
       ?time_style: time_style,
       ?time_zone: String,
@@ -108,7 +113,7 @@ module ICU4X
   class RelativeTimeFormat
     def self.new: (
       Locale locale,
-      provider: DataProvider,
+      ?provider: DataProvider,
       ?style: relative_time_format_style,
       ?numeric: relative_time_format_numeric
     ) -> RelativeTimeFormat
@@ -130,7 +135,7 @@ module ICU4X
   class ListFormat
     def self.new: (
       Locale locale,
-      provider: DataProvider,
+      ?provider: DataProvider,
       ?type: list_format_type,
       ?style: list_format_style
     ) -> ListFormat
@@ -146,7 +151,7 @@ module ICU4X
   class Collator
     def self.new: (
       Locale locale,
-      provider: DataProvider,
+      ?provider: DataProvider,
       ?sensitivity: collator_sensitivity,
       ?numeric: bool,
       ?case_first: collator_case_first
@@ -168,7 +173,7 @@ module ICU4X
   class DisplayNames
     def self.new: (
       Locale locale,
-      provider: DataProvider,
+      ?provider: DataProvider,
       type: display_names_type,
       ?style: display_names_style,
       ?fallback: display_names_fallback

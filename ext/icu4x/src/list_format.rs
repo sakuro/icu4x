@@ -88,20 +88,32 @@ impl ListFormat {
         let icu_locale = locale_ref.clone();
         drop(locale_ref);
 
-        // Get kwargs
+        // Get kwargs (optional)
         let kwargs: RHash = if args.len() > 1 {
             TryConvert::try_convert(args[1])?
         } else {
-            return Err(Error::new(
-                ruby.exception_arg_error(),
-                "missing keyword: :provider",
-            ));
+            ruby.hash_new()
         };
 
-        // Extract provider (required)
-        let provider_value: Value = kwargs
-            .lookup::<_, Option<Value>>(ruby.to_symbol("provider"))?
-            .ok_or_else(|| Error::new(ruby.exception_arg_error(), "missing keyword: :provider"))?;
+        // Extract provider (optional, falls back to default)
+        let provider_value: Option<Value> =
+            kwargs.lookup::<_, Option<Value>>(ruby.to_symbol("provider"))?;
+
+        // Resolve provider: use explicit or fall back to default
+        let resolved_provider: Value = match provider_value {
+            Some(v) if !v.is_nil() => v,
+            _ => {
+                let icu4x_module: RModule = ruby.eval("ICU4X")?;
+                let default: Value = icu4x_module.funcall("default_provider", ())?;
+                if default.is_nil() {
+                    return Err(Error::new(
+                        ruby.exception_arg_error(),
+                        "No provider specified and no default configured. Set ICU4X_DATA_PATH environment variable or use ICU4X.configure.",
+                    ));
+                }
+                default
+            }
+        };
 
         // Extract type option (default: :conjunction)
         let type_value: Option<Symbol> =
@@ -151,7 +163,7 @@ impl ListFormat {
             .unwrap_or_else(|_| ruby.exception_runtime_error());
 
         // Get the DataProvider
-        let dp: &DataProvider = TryConvert::try_convert(provider_value).map_err(|_| {
+        let dp: &DataProvider = TryConvert::try_convert(resolved_provider).map_err(|_| {
             Error::new(
                 ruby.exception_type_error(),
                 "provider must be a DataProvider",

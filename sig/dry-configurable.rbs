@@ -1,0 +1,11 @@
+module Dry
+  module Configurable
+    interface _Config
+      def data_path: () -> Pathname?
+    end
+
+    def self?.setting: (Symbol name, ?default: untyped, ?constructor: ^(untyped) -> untyped) -> void
+    def self?.config: () -> _Config
+    def self?.configure: () { (_Config) -> void } -> void
+  end
+end

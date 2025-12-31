@@ -28,10 +28,33 @@ RSpec.describe ICU4X::DateTimeFormat do
       expect(formatter).to be_a(ICU4X::DateTimeFormat)
     end
 
+    context "with optional provider" do
+      around do |example|
+        original_env = ENV.fetch("ICU4X_DATA_PATH", nil)
+        ENV["ICU4X_DATA_PATH"] = valid_blob_path.to_s
+        example.run
+      ensure
+        ENV["ICU4X_DATA_PATH"] = original_env
+      end
+
+      it "uses default provider when provider is not specified" do
+        formatter = ICU4X::DateTimeFormat.new(locale, date_style: :short)
+        expect(formatter.format(Time.utc(2024, 1, 15))).to include("1/15/24")
+      end
+    end
+
     context "with invalid arguments" do
-      it "raises ArgumentError when missing provider keyword" do
-        expect { ICU4X::DateTimeFormat.new(locale) }
-          .to raise_error(ArgumentError, /missing keyword: :provider/)
+      around do |example|
+        original_env = ENV.fetch("ICU4X_DATA_PATH", nil)
+        ENV.delete("ICU4X_DATA_PATH")
+        example.run
+      ensure
+        ENV["ICU4X_DATA_PATH"] = original_env
+      end
+
+      it "raises ArgumentError when no provider is available" do
+        expect { ICU4X::DateTimeFormat.new(locale, date_style: :long) }
+          .to raise_error(ArgumentError, /No provider specified and no default configured/)
       end
 
       it "raises TypeError when provider is invalid type" do

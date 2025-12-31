@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require "dry-configurable"
+require "pathname"
+
 require_relative "icu4x/icu4x" # Native extension
 require_relative "icu4x/version"
 
@@ -7,6 +10,31 @@ require_relative "icu4x/version"
 #
 # This module serves as the namespace for the gem's functionality.
 module ICU4X
+  extend Dry::Configurable
+
+  setting :data_path, default: nil, constructor: ->(v) { v.nil? ? nil : Pathname(v) }
+
+  @default_provider_mutex = Mutex.new
+
+  # Returns the default provider, lazily loaded from configuration or environment.
+  # @return [DataProvider, nil] The default provider, or nil if not configured
+  def self.default_provider
+    @default_provider_mutex.synchronize do
+      @default_provider ||= begin
+        path = config.data_path || ENV["ICU4X_DATA_PATH"]&.then {|p| Pathname(p) }
+        path && DataProvider.from_blob(path)
+      end
+    end
+  end
+
+  # Resets the cached default provider. Useful for testing.
+  # @return [void]
+  def self.reset_default_provider!
+    @default_provider_mutex.synchronize do
+      @default_provider = nil
+    end
+  end
+
   # Base error class for all ICU4X errors
   class Error < StandardError; end
 

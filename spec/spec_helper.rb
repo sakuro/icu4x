@@ -3,7 +3,10 @@
 require "simplecov"
 SimpleCov.start
 
+require "dry/configurable/test_interface"
 require "icu4x"
+
+ICU4X.enable_test_interface
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
@@ -14,5 +17,11 @@ RSpec.configure do |config|
 
   config.expect_with :rspec do |c|
     c.syntax = :expect
+  end
+
+  # Reset ICU4X configuration between tests
+  config.before do
+    ICU4X.reset_config
+    ICU4X.reset_default_provider!
   end
 end
