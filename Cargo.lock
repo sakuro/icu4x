@@ -421,6 +421,7 @@ version = "0.1.0"
 dependencies = [
  "fixed_decimal",
  "icu",
+ "icu_experimental",
  "icu_locale",
  "icu_provider",
  "icu_provider_adapters",

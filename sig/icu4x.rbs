@@ -53,6 +53,7 @@ module ICU4X
 
   type date_style = :full | :long | :medium | :short
   type time_style = :full | :long | :medium | :short
+  type duration_format_style = :long | :short | :narrow | :digital
 
   class NumberFormat
     def self.new: (
@@ -97,6 +98,33 @@ module ICU4X
       ?date_style: date_style,
       ?time_style: time_style,
       ?time_zone: String
+    }
+  end
+
+  type duration_components = {
+    ?years: Integer,
+    ?months: Integer,
+    ?weeks: Integer,
+    ?days: Integer,
+    ?hours: Integer,
+    ?minutes: Integer,
+    ?seconds: Integer,
+    ?milliseconds: Integer,
+    ?microseconds: Integer,
+    ?nanoseconds: Integer
+  }
+
+  class DurationFormat
+    def self.new: (
+      Locale locale,
+      provider: DataProvider,
+      ?style: duration_format_style
+    ) -> DurationFormat
+
+    def format: (duration_components duration) -> String
+    def resolved_options: () -> {
+      locale: String,
+      style: duration_format_style
     }
   end
 
