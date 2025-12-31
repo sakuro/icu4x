@@ -3,6 +3,7 @@ mod data_generator;
 mod data_provider;
 mod datetime_format;
 mod display_names;
+mod helpers;
 mod list_format;
 mod locale;
 mod number_format;

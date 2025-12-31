@@ -1,4 +1,5 @@
 use crate::data_provider::DataProvider;
+use crate::helpers;
 use crate::locale::Locale;
 use icu::calendar::preferences::CalendarAlgorithm;
 use icu::calendar::{AnyCalendarKind, Date, Gregorian};
@@ -182,26 +183,8 @@ impl DateTimeFormat {
             ruby.hash_new()
         };
 
-        // Extract provider (optional, falls back to default)
-        let provider_value: Option<Value> =
-            kwargs.lookup::<_, Option<Value>>(ruby.to_symbol("provider"))?;
-
         // Resolve provider: use explicit or fall back to default
-        let resolved_provider: Value = match provider_value {
-            Some(v) if !v.is_nil() => v,
-            _ => {
-                // Call ICU4X.default_provider
-                let icu4x_module: RModule = ruby.eval("ICU4X")?;
-                let default: Value = icu4x_module.funcall("default_provider", ())?;
-                if default.is_nil() {
-                    return Err(Error::new(
-                        ruby.exception_arg_error(),
-                        "No provider specified and no default configured. Set ICU4X_DATA_PATH environment variable or use ICU4X.configure.",
-                    ));
-                }
-                default
-            }
-        };
+        let resolved_provider = helpers::resolve_provider(ruby, &kwargs)?;
 
         // Extract date_style option
         let date_style = Self::extract_date_style(ruby, &kwargs)?;
