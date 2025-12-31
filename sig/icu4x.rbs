@@ -100,6 +100,26 @@ module ICU4X
     }
   end
 
+  type relative_time_format_style = :long | :short | :narrow
+  type relative_time_format_numeric = :always | :auto
+  type relative_time_unit = :second | :minute | :hour | :day | :week | :month | :quarter | :year
+
+  class RelativeTimeFormat
+    def self.new: (
+      Locale locale,
+      provider: DataProvider,
+      ?style: relative_time_format_style,
+      ?numeric: relative_time_format_numeric
+    ) -> RelativeTimeFormat
+
+    def format: (Integer value, relative_time_unit unit) -> String
+    def resolved_options: () -> {
+      locale: String,
+      style: relative_time_format_style,
+      numeric: relative_time_format_numeric
+    }
+  end
+
   type list_format_type = :conjunction | :disjunction | :unit
   type list_format_style = :long | :short | :narrow
 
