@@ -1,6 +1,7 @@
 use crate::data_provider::DataProvider;
 use crate::locale::Locale;
-use icu::calendar::{Date, Gregorian};
+use icu::calendar::preferences::CalendarAlgorithm;
+use icu::calendar::{AnyCalendarKind, Date, Gregorian};
 use icu::datetime::fieldsets::enums::{
     CompositeDateTimeFieldSet, DateAndTimeFieldSet, DateFieldSet, TimeFieldSet,
 };
@@ -57,6 +58,81 @@ impl TimeStyle {
     }
 }
 
+/// Calendar option
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Calendar {
+    Gregory,
+    Japanese,
+    Buddhist,
+    Chinese,
+    Hebrew,
+    Islamic,
+    Persian,
+    Indian,
+    Ethiopian,
+    Coptic,
+    Roc,
+    Dangi,
+}
+
+impl Calendar {
+    fn to_symbol_name(self) -> &'static str {
+        match self {
+            Calendar::Gregory => "gregory",
+            Calendar::Japanese => "japanese",
+            Calendar::Buddhist => "buddhist",
+            Calendar::Chinese => "chinese",
+            Calendar::Hebrew => "hebrew",
+            Calendar::Islamic => "islamic",
+            Calendar::Persian => "persian",
+            Calendar::Indian => "indian",
+            Calendar::Ethiopian => "ethiopian",
+            Calendar::Coptic => "coptic",
+            Calendar::Roc => "roc",
+            Calendar::Dangi => "dangi",
+        }
+    }
+
+    fn to_calendar_algorithm(self) -> CalendarAlgorithm {
+        match self {
+            Calendar::Gregory => CalendarAlgorithm::Gregory,
+            Calendar::Japanese => CalendarAlgorithm::Japanese,
+            Calendar::Buddhist => CalendarAlgorithm::Buddhist,
+            Calendar::Chinese => CalendarAlgorithm::Chinese,
+            Calendar::Hebrew => CalendarAlgorithm::Hebrew,
+            Calendar::Islamic => CalendarAlgorithm::Hijri(None),
+            Calendar::Persian => CalendarAlgorithm::Persian,
+            Calendar::Indian => CalendarAlgorithm::Indian,
+            Calendar::Ethiopian => CalendarAlgorithm::Ethiopic,
+            Calendar::Coptic => CalendarAlgorithm::Coptic,
+            Calendar::Roc => CalendarAlgorithm::Roc,
+            Calendar::Dangi => CalendarAlgorithm::Dangi,
+        }
+    }
+
+    fn from_any_calendar_kind(kind: AnyCalendarKind) -> Self {
+        match kind {
+            AnyCalendarKind::Buddhist => Calendar::Buddhist,
+            AnyCalendarKind::Chinese => Calendar::Chinese,
+            AnyCalendarKind::Coptic => Calendar::Coptic,
+            AnyCalendarKind::Dangi => Calendar::Dangi,
+            AnyCalendarKind::Ethiopian | AnyCalendarKind::EthiopianAmeteAlem => Calendar::Ethiopian,
+            AnyCalendarKind::Gregorian => Calendar::Gregory,
+            AnyCalendarKind::Hebrew => Calendar::Hebrew,
+            AnyCalendarKind::Indian => Calendar::Indian,
+            AnyCalendarKind::HijriTabularTypeIIFriday
+            | AnyCalendarKind::HijriSimulatedMecca
+            | AnyCalendarKind::HijriTabularTypeIIThursday
+            | AnyCalendarKind::HijriUmmAlQura => Calendar::Islamic,
+            AnyCalendarKind::Iso => Calendar::Gregory,
+            AnyCalendarKind::Japanese | AnyCalendarKind::JapaneseExtended => Calendar::Japanese,
+            AnyCalendarKind::Persian => Calendar::Persian,
+            AnyCalendarKind::Roc => Calendar::Roc,
+            _ => Calendar::Gregory,
+        }
+    }
+}
+
 /// Ruby wrapper for ICU4X datetime formatters
 #[magnus::wrap(class = "ICU4X::DateTimeFormat", free_immediately, size)]
 pub struct DateTimeFormat {
@@ -66,6 +142,7 @@ pub struct DateTimeFormat {
     time_style: Option<TimeStyle>,
     time_zone: Option<String>,
     jiff_timezone: Option<TimeZone>,
+    calendar: Calendar,
 }
 
 // SAFETY: Ruby's GVL protects access to this type.
@@ -80,7 +157,8 @@ impl DateTimeFormat {
     /// * `date_style:` - :full, :long, :medium, or :short
     /// * `time_style:` - :full, :long, :medium, or :short
     /// * `time_zone:` - IANA timezone name (e.g., "Asia/Tokyo")
-    /// * `calendar:` - :gregory (only gregory is supported)
+    /// * `calendar:` - :gregory, :japanese, :buddhist, :chinese, :hebrew, :islamic,
+    ///                 :persian, :indian, :ethiopian, :coptic, :roc, :dangi
     fn new(ruby: &Ruby, args: &[Value]) -> Result<Self, Error> {
         // Parse arguments: (locale, **kwargs)
         if args.is_empty() {
@@ -153,18 +231,8 @@ impl DateTimeFormat {
             None
         };
 
-        // Extract calendar option (only :gregory is supported)
-        let calendar_value: Option<Symbol> =
-            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("calendar"))?;
-        if let Some(cal) = calendar_value {
-            let gregory_sym = ruby.to_symbol("gregory");
-            if !cal.equal(gregory_sym)? {
-                return Err(Error::new(
-                    ruby.exception_arg_error(),
-                    "only :gregory calendar is currently supported",
-                ));
-            }
-        }
+        // Extract calendar option
+        let calendar = Self::extract_calendar(ruby, &kwargs)?;
 
         // Get the error exception class
         let error_class: ExceptionClass = ruby
@@ -182,8 +250,12 @@ impl DateTimeFormat {
         // Create field set based on date_style and time_style
         let field_set = Self::create_field_set(date_style, time_style);
 
-        // Create formatter
-        let prefs: DateTimeFormatterPreferences = (&icu_locale).into();
+        // Create formatter with calendar preference
+        let mut prefs: DateTimeFormatterPreferences = (&icu_locale).into();
+        if let Some(cal) = calendar {
+            prefs.calendar_algorithm = Some(cal.to_calendar_algorithm());
+        }
+
         let formatter =
             DateTimeFormatter::try_new_unstable(&dp.inner.as_deserializing(), prefs, field_set)
                 .map_err(|e| {
@@ -193,6 +265,9 @@ impl DateTimeFormat {
                     )
                 })?;
 
+        // Get the resolved calendar from the formatter
+        let resolved_calendar = Calendar::from_any_calendar_kind(formatter.calendar().kind());
+
         Ok(Self {
             inner: formatter,
             locale_str,
@@ -200,7 +275,62 @@ impl DateTimeFormat {
             time_style,
             time_zone,
             jiff_timezone,
+            calendar: resolved_calendar,
         })
+    }
+
+    /// Extract calendar option from kwargs
+    fn extract_calendar(ruby: &Ruby, kwargs: &RHash) -> Result<Option<Calendar>, Error> {
+        let calendar_value: Option<Symbol> =
+            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("calendar"))?;
+
+        let Some(sym) = calendar_value else {
+            return Ok(None);
+        };
+
+        let gregory = ruby.to_symbol("gregory");
+        let japanese = ruby.to_symbol("japanese");
+        let buddhist = ruby.to_symbol("buddhist");
+        let chinese = ruby.to_symbol("chinese");
+        let hebrew = ruby.to_symbol("hebrew");
+        let islamic = ruby.to_symbol("islamic");
+        let persian = ruby.to_symbol("persian");
+        let indian = ruby.to_symbol("indian");
+        let ethiopian = ruby.to_symbol("ethiopian");
+        let coptic = ruby.to_symbol("coptic");
+        let roc = ruby.to_symbol("roc");
+        let dangi = ruby.to_symbol("dangi");
+
+        if sym.equal(gregory)? {
+            Ok(Some(Calendar::Gregory))
+        } else if sym.equal(japanese)? {
+            Ok(Some(Calendar::Japanese))
+        } else if sym.equal(buddhist)? {
+            Ok(Some(Calendar::Buddhist))
+        } else if sym.equal(chinese)? {
+            Ok(Some(Calendar::Chinese))
+        } else if sym.equal(hebrew)? {
+            Ok(Some(Calendar::Hebrew))
+        } else if sym.equal(islamic)? {
+            Ok(Some(Calendar::Islamic))
+        } else if sym.equal(persian)? {
+            Ok(Some(Calendar::Persian))
+        } else if sym.equal(indian)? {
+            Ok(Some(Calendar::Indian))
+        } else if sym.equal(ethiopian)? {
+            Ok(Some(Calendar::Ethiopian))
+        } else if sym.equal(coptic)? {
+            Ok(Some(Calendar::Coptic))
+        } else if sym.equal(roc)? {
+            Ok(Some(Calendar::Roc))
+        } else if sym.equal(dangi)? {
+            Ok(Some(Calendar::Dangi))
+        } else {
+            Err(Error::new(
+                ruby.exception_arg_error(),
+                "calendar must be :gregory, :japanese, :buddhist, :chinese, :hebrew, :islamic, :persian, :indian, :ethiopian, :coptic, :roc, or :dangi",
+            ))
+        }
     }
 
     /// Extract date_style option from kwargs
@@ -401,7 +531,10 @@ impl DateTimeFormat {
         let hash = ruby.hash_new();
 
         hash.aset(ruby.to_symbol("locale"), self.locale_str.as_str())?;
-        hash.aset(ruby.to_symbol("calendar"), ruby.to_symbol("gregory"))?;
+        hash.aset(
+            ruby.to_symbol("calendar"),
+            ruby.to_symbol(self.calendar.to_symbol_name()),
+        )?;
 
         if let Some(ds) = self.date_style {
             hash.aset(
