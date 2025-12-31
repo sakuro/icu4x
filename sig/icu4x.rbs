@@ -139,4 +139,26 @@ module ICU4X
       ?case_first: collator_case_first
     }
   end
+
+  type display_names_type = :language | :region | :script | :locale
+  type display_names_style = :long | :short | :narrow
+  type display_names_fallback = :code | :none
+
+  class DisplayNames
+    def self.new: (
+      Locale locale,
+      provider: DataProvider,
+      type: display_names_type,
+      ?style: display_names_style,
+      ?fallback: display_names_fallback
+    ) -> DisplayNames
+
+    def of: (String code) -> String?
+    def resolved_options: () -> {
+      locale: String,
+      type: display_names_type,
+      style: display_names_style,
+      fallback: display_names_fallback
+    }
+  end
 end
