@@ -7,6 +7,7 @@ mod list_format;
 mod locale;
 mod number_format;
 mod plural_rules;
+mod segmenter;
 
 use magnus::{Error, Ruby};
 
@@ -23,6 +24,7 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     list_format::init(ruby, &module)?;
     collator::init(ruby, &module)?;
     display_names::init(ruby, &module)?;
+    segmenter::init(ruby, &module)?;
 
     Ok(())
 }
