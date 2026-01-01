@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+### Fixed
+
+- Include `icu4x_macros` crate and Cargo workspace files in source gem (#57)
+
 ## [0.5.0] - 2026-01-01
 
 ### Added
