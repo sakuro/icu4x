@@ -112,10 +112,18 @@
 #     class DataGenerator
 #       # Exports locale data to a file.
 #       #
-#       # The +und+ (undetermined) locale is automatically included if not specified,
-#       # as it provides essential fallback data for ICU4X operations.
+#       # The +locales+ parameter accepts either a Symbol for predefined locale sets
+#       # based on CLDR coverage levels, or an Array of locale identifier strings.
+#       # When using +with_descendants+, ancestor locales (including +und+) are
+#       # automatically included for fallback support.
 #       #
-#       # @param locales [Array<String>] list of locale identifiers to include
+#       # @param locales [Symbol, Array<String>] locale specification:
+#       #   - +:full+ - all CLDR locales (700+)
+#       #   - +:recommended+ - locales with basic, moderate, or modern coverage (164)
+#       #   - +:modern+ - locales with modern coverage only (103)
+#       #   - +:moderate+ - locales with moderate coverage only
+#       #   - +:basic+ - locales with basic coverage only
+#       #   - +Array<String>+ - explicit list of locale identifiers
 #       # @param markers [Symbol, Array<String>] data markers to include;
 #       #   use +:all+ for all markers, or specify individual marker names
 #       # @param format [Symbol] output format, currently only +:blob+ is supported
@@ -131,7 +139,16 @@
 #       #     output: Pathname.new("i18n_data.postcard")
 #       #   )
 #       #
+#       # @example Export data for all modern coverage locales
+#       #   ICU4X::DataGenerator.export(
+#       #     locales: :modern,
+#       #     markers: :all,
+#       #     format: :blob,
+#       #     output: Pathname.new("modern_data.postcard")
+#       #   )
+#       #
 #       # @see .available_markers
+#       # @see https://cldr.unicode.org/index/cldr-spec/coverage-levels CLDR Coverage Levels
 #       #
 #       def self.export(locales:, markers:, format:, output:); end
 #

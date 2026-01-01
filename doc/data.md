@@ -196,7 +196,7 @@ provider = ICU4X::DataProvider.from_blob(Pathname.new("path/to/data.blob"), prio
 - Fallback follows the locale hierarchy, not arbitrary language preferences.
   - Example: `ja` will NOT fall back to `en`. It falls back to `und` (undetermined).
 - For data to be available via fallback, it must be included when generating the blob file.
-- The `und` locale is automatically included when generating data to ensure fallback support.
+- When specifying locales, ancestor locales (including `und`) are automatically included via `with_descendants`.
 
 ---
 
@@ -210,8 +210,13 @@ A class for generating locale data blob files.
 module ICU4X
   class DataGenerator
     # Export locale data
-    # The `und` locale is automatically included for fallback support.
-    # @param locales [Array<String>] Locales to include
+    # @param locales [Symbol, Array<String>] Locale specification:
+    #   - :full - all CLDR locales (700+)
+    #   - :recommended - basic + moderate + modern coverage (164)
+    #   - :modern - modern coverage only (103)
+    #   - :moderate - moderate coverage only
+    #   - :basic - basic coverage only
+    #   - Array<String> - explicit list of locale identifiers
     # @param markers [Symbol, Array<String>] Data markers (:all or specific markers)
     # @param format [Symbol] Output format (:blob)
     # @param output [Pathname] Output path
@@ -228,11 +233,20 @@ end
 ### Usage
 
 ```ruby
+# Using explicit locale list
 ICU4X::DataGenerator.export(
   locales: %w[ja en],
   markers: :all,
   format: :blob,
   output: Pathname.new("data/i18n.blob")
+)
+
+# Using symbolic locale specifier
+ICU4X::DataGenerator.export(
+  locales: :modern,
+  markers: :all,
+  format: :blob,
+  output: Pathname.new("data/modern.blob")
 )
 ```
 
