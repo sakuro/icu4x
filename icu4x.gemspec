@@ -23,9 +23,13 @@ Gem::Specification.new do |spec|
     Dir[
       "lib/icu4x.rb",
       "lib/icu4x/**/*.rb",
+      "Cargo.toml",
+      "Cargo.lock",
       "ext/icu4x/extconf.rb",
       "ext/icu4x/Cargo.toml",
       "ext/icu4x/**/*.rs",
+      "ext/icu4x_macros/Cargo.toml",
+      "ext/icu4x_macros/**/*.rs",
       "sig/icu4x.rbs",
       "LICENSE.txt",
       "README.md",
