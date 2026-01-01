@@ -78,7 +78,85 @@ dtf = ICU4X::DateTimeFormat.new(
 dtf.format(Time.now)  # => "2025年12月28日"
 ```
 
-**Note**: Provider must always be explicitly specified.
+---
+
+## Default Provider
+
+Instead of passing `provider:` to every formatter, you can configure a default provider that will be used automatically when `provider:` is omitted.
+
+### Configuration Methods
+
+There are two ways to configure the default provider:
+
+#### 1. Programmatic Configuration
+
+Use `ICU4X.configure` to set the data path:
+
+```ruby
+ICU4X.configure do |config|
+  config.data_path = Pathname.new("data/i18n.blob")
+end
+```
+
+#### 2. Environment Variable
+
+Set the `ICU4X_DATA_PATH` environment variable:
+
+```bash
+export ICU4X_DATA_PATH=/path/to/data.blob
+```
+
+### Priority
+
+When both are set, **programmatic configuration takes precedence** over the environment variable:
+
+1. `config.data_path` (highest priority)
+2. `ENV["ICU4X_DATA_PATH"]`
+
+### Usage
+
+Once configured, formatters will use the default provider automatically:
+
+```ruby
+# Configure once at application startup
+ICU4X.configure do |config|
+  config.data_path = Pathname.new("data/i18n.blob")
+end
+
+# Create formatters without explicit provider
+locale = ICU4X::Locale.parse("ja-JP")
+dtf = ICU4X::DateTimeFormat.new(locale, date_style: :long)
+nf = ICU4X::NumberFormat.new(locale, style: :currency, currency: "JPY")
+```
+
+### Accessing the Default Provider
+
+You can access the default provider directly via `ICU4X.default_provider`:
+
+```ruby
+ICU4X.default_provider  # => DataProvider instance or nil
+```
+
+The default provider is:
+- **Lazy-loaded**: Created on first access, not at configuration time
+- **Cached**: The same instance is reused for all formatters
+- **Thread-safe**: Safe to use in multi-threaded applications
+
+### Resetting the Default Provider
+
+For testing purposes, you can reset the cached default provider:
+
+```ruby
+ICU4X.reset_default_provider!
+```
+
+This clears the cached provider, allowing configuration changes to take effect.
+
+### Notes
+
+- If no default provider is configured and `provider:` is omitted, an `ArgumentError` is raised
+- You can always override the default by passing `provider:` explicitly
+- Path must be a `Pathname` object when using `config.data_path`
 
 ---
 
