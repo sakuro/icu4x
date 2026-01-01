@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.5.0] - 2026-01-01
+
 ### Added
 
 - **Locale**: BCP 47 (`parse`) and POSIX (`parse_posix`) locale parsing
