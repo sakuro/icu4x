@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.5.2] - 2026-01-01
+
 ### Fixed
 
 - Fix native extension loader for precompiled gems (#61)
