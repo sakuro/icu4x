@@ -158,7 +158,7 @@
 #       #
 #       # @example
 #       #   markers = ICU4X::DataGenerator.available_markers
-#       #   #=> ["datetime/gregory/datelengths@1", "decimal/symbols@1", ...]
+#       #   #=> ["CalendarJapaneseExtendedV1", "CalendarJapaneseModernV1", ...]
 #       #
 #       def self.available_markers; end
 #     end
