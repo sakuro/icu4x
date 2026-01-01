@@ -3,7 +3,13 @@
 require "dry-configurable"
 require "pathname"
 
-require_relative "icu4x/icu4x" # Native extension
+# Native extension - try version-specific path for precompiled gems first
+begin
+  RUBY_VERSION =~ /\A(\d+\.\d+)/
+  require_relative "icu4x/#{$1}/icu4x"
+rescue LoadError
+  require_relative "icu4x/icu4x"
+end
 require_relative "icu4x/version"
 
 # ICU4X provides Ruby bindings for ICU4X, a Unicode library.
