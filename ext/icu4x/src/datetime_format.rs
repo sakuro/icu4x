@@ -15,8 +15,7 @@ use icu4x_macros::RubySymbol;
 use jiff::Timestamp;
 use jiff::tz::TimeZone;
 use magnus::{
-    Error, ExceptionClass, RHash, RModule, Ruby, Symbol, TryConvert, Value, function, method,
-    prelude::*,
+    Error, ExceptionClass, RHash, RModule, Ruby, TryConvert, Value, function, method, prelude::*,
 };
 
 /// Date style option
@@ -136,20 +135,12 @@ impl DateTimeFormat {
         let resolved_provider = helpers::resolve_provider(ruby, &kwargs)?;
 
         // Extract date_style option
-        let date_style_value: Option<Symbol> =
-            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("date_style"))?;
-        let date_style = match date_style_value {
-            Some(sym) => Some(DateStyle::from_ruby_symbol(ruby, sym, "date_style")?),
-            None => None,
-        };
+        let date_style =
+            helpers::extract_symbol(ruby, &kwargs, "date_style", DateStyle::from_ruby_symbol)?;
 
         // Extract time_style option
-        let time_style_value: Option<Symbol> =
-            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("time_style"))?;
-        let time_style = match time_style_value {
-            Some(sym) => Some(TimeStyle::from_ruby_symbol(ruby, sym, "time_style")?),
-            None => None,
-        };
+        let time_style =
+            helpers::extract_symbol(ruby, &kwargs, "time_style", TimeStyle::from_ruby_symbol)?;
 
         // At least one of date_style or time_style must be specified
         if date_style.is_none() && time_style.is_none() {
@@ -187,12 +178,8 @@ impl DateTimeFormat {
         };
 
         // Extract calendar option
-        let calendar_value: Option<Symbol> =
-            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("calendar"))?;
-        let calendar = match calendar_value {
-            Some(sym) => Some(Calendar::from_ruby_symbol(ruby, sym, "calendar")?),
-            None => None,
-        };
+        let calendar =
+            helpers::extract_symbol(ruby, &kwargs, "calendar", Calendar::from_ruby_symbol)?;
 
         // Get the error exception class
         let error_class: ExceptionClass = ruby

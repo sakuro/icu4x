@@ -15,8 +15,7 @@ use icu::experimental::dimension::percent::options::PercentFormatterOptions;
 use icu_provider::buf::AsDeserializingBufferProvider;
 use icu4x_macros::RubySymbol;
 use magnus::{
-    Error, ExceptionClass, RHash, RModule, Ruby, Symbol, TryConvert, Value, function, method,
-    prelude::*,
+    Error, ExceptionClass, RHash, RModule, Ruby, TryConvert, Value, function, method, prelude::*,
 };
 use tinystr::TinyAsciiStr;
 
@@ -111,12 +110,8 @@ impl NumberFormat {
         let resolved_provider = helpers::resolve_provider(ruby, &kwargs)?;
 
         // Extract style option (default: :decimal)
-        let style_value: Option<Symbol> =
-            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("style"))?;
-        let style = match style_value {
-            Some(sym) => Style::from_ruby_symbol(ruby, sym, "style")?,
-            None => Style::Decimal,
-        };
+        let style = helpers::extract_symbol(ruby, &kwargs, "style", Style::from_ruby_symbol)?
+            .unwrap_or(Style::Decimal);
 
         // Extract currency option (required for currency style)
         let currency_str: Option<String> =
@@ -143,12 +138,13 @@ impl NumberFormat {
             Self::extract_digit_option(ruby, &kwargs, "maximum_fraction_digits")?;
 
         // Extract rounding_mode option (default: :half_expand)
-        let rounding_mode_value: Option<Symbol> =
-            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("rounding_mode"))?;
-        let rounding_mode = match rounding_mode_value {
-            Some(sym) => RoundingMode::from_ruby_symbol(ruby, sym, "rounding_mode")?,
-            None => RoundingMode::default(),
-        };
+        let rounding_mode = helpers::extract_symbol(
+            ruby,
+            &kwargs,
+            "rounding_mode",
+            RoundingMode::from_ruby_symbol,
+        )?
+        .unwrap_or_default();
 
         // Get the error exception class
         let error_class: ExceptionClass = ruby

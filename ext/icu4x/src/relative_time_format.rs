@@ -101,20 +101,13 @@ impl RelativeTimeFormat {
         let resolved_provider = helpers::resolve_provider(ruby, &kwargs)?;
 
         // Extract style option (default: :long)
-        let style_value: Option<Symbol> =
-            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("style"))?;
-        let style = match style_value {
-            Some(sym) => Style::from_ruby_symbol(ruby, sym, "style")?,
-            None => Style::Long,
-        };
+        let style = helpers::extract_symbol(ruby, &kwargs, "style", Style::from_ruby_symbol)?
+            .unwrap_or(Style::Long);
 
         // Extract numeric option (default: :always)
-        let numeric_value: Option<Symbol> =
-            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("numeric"))?;
-        let numeric = match numeric_value {
-            Some(sym) => NumericMode::from_ruby_symbol(ruby, sym, "numeric")?,
-            None => NumericMode::Always,
-        };
+        let numeric =
+            helpers::extract_symbol(ruby, &kwargs, "numeric", NumericMode::from_ruby_symbol)?
+                .unwrap_or(NumericMode::Always);
 
         // Get the error exception class
         let error_class: ExceptionClass = ruby

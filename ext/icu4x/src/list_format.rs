@@ -5,8 +5,8 @@ use icu::list::options::{ListFormatterOptions, ListLength};
 use icu_provider::buf::AsDeserializingBufferProvider;
 use icu4x_macros::RubySymbol;
 use magnus::{
-    Error, ExceptionClass, RArray, RHash, RModule, Ruby, Symbol, TryConvert, Value, function,
-    method, prelude::*,
+    Error, ExceptionClass, RArray, RHash, RModule, Ruby, TryConvert, Value, function, method,
+    prelude::*,
 };
 
 /// The type of list formatting
@@ -70,20 +70,13 @@ impl ListFormat {
         let resolved_provider = helpers::resolve_provider(ruby, &kwargs)?;
 
         // Extract type option (default: :conjunction)
-        let type_value: Option<Symbol> =
-            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("type"))?;
-        let list_type = match type_value {
-            Some(sym) => ListType::from_ruby_symbol(ruby, sym, "type")?,
-            None => ListType::Conjunction,
-        };
+        let list_type = helpers::extract_symbol(ruby, &kwargs, "type", ListType::from_ruby_symbol)?
+            .unwrap_or(ListType::Conjunction);
 
         // Extract style option (default: :long)
-        let style_value: Option<Symbol> =
-            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("style"))?;
-        let list_style = match style_value {
-            Some(sym) => ListStyle::from_ruby_symbol(ruby, sym, "style")?,
-            None => ListStyle::Long,
-        };
+        let list_style =
+            helpers::extract_symbol(ruby, &kwargs, "style", ListStyle::from_ruby_symbol)?
+                .unwrap_or(ListStyle::Long);
 
         // Get the error exception class
         let error_class: ExceptionClass = ruby
