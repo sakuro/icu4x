@@ -2,7 +2,7 @@ use crate::helpers;
 use icu_provider::DataMarkerInfo;
 use icu_provider_blob::export::BlobExporter;
 use icu_provider_export::prelude::*;
-use icu_provider_source::SourceDataProvider;
+use icu_provider_source::{CoverageLevel, SourceDataProvider};
 use magnus::{
     Error, RArray, RClass, RHash, RModule, Ruby, Symbol, Value, function, prelude::*,
     value::ReprValue,
@@ -44,14 +44,17 @@ impl DataGenerator {
     /// Export ICU4X data to a blob file
     ///
     /// # Arguments
-    /// * `locales` - Array of locale strings (e.g., ["ja", "en"])
+    /// * `locales` - Symbol (:full, :recommended, :modern, :moderate, :basic) or Array of locale strings
     /// * `markers` - :all or Array of marker symbols (e.g., [:datetime, :number, :plurals])
     /// * `format` - :blob (only blob format is supported)
     /// * `output` - Pathname for the output file
     fn export(ruby: &Ruby, kwargs: RHash) -> Result<(), Error> {
-        // Extract locales
-        let locales_value: RArray = kwargs
-            .fetch::<_, RArray>(ruby.to_symbol("locales"))
+        // Create the source data provider early (needed for coverage level locales)
+        let source_provider = SourceDataProvider::new();
+
+        // Extract locales - can be a Symbol or Array<String>
+        let locales_value: Value = kwargs
+            .fetch::<_, Value>(ruby.to_symbol("locales"))
             .map_err(|_| {
                 Error::new(
                     ruby.exception_arg_error(),
@@ -59,35 +62,7 @@ impl DataGenerator {
                 )
             })?;
 
-        let mut locale_families: Vec<DataLocaleFamily> = Vec::new();
-        let mut has_und = false;
-        for i in 0..locales_value.len() {
-            let locale_str: String = locales_value.entry(i as isize)?;
-            if locale_str == "und" {
-                has_und = true;
-            }
-            let family = DataLocaleFamily::with_descendants(locale_str.parse().map_err(|e| {
-                Error::new(
-                    ruby.exception_arg_error(),
-                    format!("Invalid locale '{}': {}", locale_str, e),
-                )
-            })?);
-            locale_families.push(family);
-        }
-
-        // Automatically include 'und' locale if not specified
-        if !has_und {
-            let family = DataLocaleFamily::with_descendants(
-                "und".parse().expect("'und' is a valid locale"),
-            );
-            locale_families.push(family);
-
-            let kernel: Value = ruby.eval("Kernel")?;
-            let _: Value = kernel.funcall(
-                "warn",
-                ("ICU4X::DataGenerator.export: 'und' locale automatically included for fallback support.",),
-            )?;
-        }
+        let locale_families = Self::parse_locales(ruby, locales_value, &source_provider)?;
 
         // Extract markers
         let markers_value: Value = kwargs
@@ -185,9 +160,6 @@ impl DataGenerator {
             })?;
         }
 
-        // Create the source data provider (downloads CLDR data)
-        let source_provider = SourceDataProvider::new();
-
         // Create the blob exporter
         let file = File::create(&output_path).map_err(|e| {
             Error::new(
@@ -235,6 +207,83 @@ impl DataGenerator {
             array.push(ruby.str_new(name))?;
         }
         Ok(array)
+    }
+
+    /// Parse locales from Ruby value (Symbol or Array)
+    fn parse_locales(
+        ruby: &Ruby,
+        locales_value: Value,
+        source_provider: &SourceDataProvider,
+    ) -> Result<Vec<DataLocaleFamily>, Error> {
+        // Check if it's a symbol
+        if let Ok(symbol) = Symbol::try_convert(locales_value) {
+            let symbol_name = symbol.name()?;
+            match symbol_name.as_ref() {
+                "full" => Ok(vec![DataLocaleFamily::FULL]),
+                "modern" => Self::locales_from_coverage(ruby, source_provider, &[CoverageLevel::Modern]),
+                "moderate" => {
+                    Self::locales_from_coverage(ruby, source_provider, &[CoverageLevel::Moderate])
+                }
+                "basic" => Self::locales_from_coverage(ruby, source_provider, &[CoverageLevel::Basic]),
+                "recommended" => Self::locales_from_coverage(
+                    ruby,
+                    source_provider,
+                    &[
+                        CoverageLevel::Modern,
+                        CoverageLevel::Moderate,
+                        CoverageLevel::Basic,
+                    ],
+                ),
+                name => Err(Error::new(
+                    ruby.exception_arg_error(),
+                    format!(
+                        "unknown locale specifier: :{}. Valid options are :full, :recommended, :modern, :moderate, :basic",
+                        name
+                    ),
+                )),
+            }
+        } else if let Ok(array) = RArray::try_convert(locales_value) {
+            // Array of locale strings
+            let mut families = Vec::new();
+            for i in 0..array.len() {
+                let locale_str: String = array.entry(i as isize)?;
+                let family = DataLocaleFamily::with_descendants(locale_str.parse().map_err(|e| {
+                    Error::new(
+                        ruby.exception_arg_error(),
+                        format!("Invalid locale '{}': {}", locale_str, e),
+                    )
+                })?);
+                families.push(family);
+            }
+            Ok(families)
+        } else {
+            Err(Error::new(
+                ruby.exception_arg_error(),
+                "locales must be a Symbol (:full, :recommended, :modern, :moderate, :basic) or an Array of locale strings",
+            ))
+        }
+    }
+
+    /// Get locales from CLDR coverage levels
+    fn locales_from_coverage(
+        ruby: &Ruby,
+        source_provider: &SourceDataProvider,
+        levels: &[CoverageLevel],
+    ) -> Result<Vec<DataLocaleFamily>, Error> {
+        let locales = source_provider
+            .locales_for_coverage_levels(levels.iter().copied())
+            .map_err(|e| {
+                let error_class = helpers::get_exception_class(ruby, "ICU4X::DataGeneratorError");
+                Error::new(
+                    error_class,
+                    format!("Failed to get locales for coverage levels: {}", e),
+                )
+            })?;
+
+        Ok(locales
+            .into_iter()
+            .map(DataLocaleFamily::with_descendants)
+            .collect())
     }
 }
 

@@ -8,10 +8,6 @@ RSpec.describe ICU4X::DataGenerator do
     let(:output_dir) { Pathname.new(Dir.mktmpdir) }
     let(:output_path) { output_dir / "test-data.postcard" }
 
-    before do
-      allow(Kernel).to receive(:warn)
-    end
-
     after do
       FileUtils.rm_rf(output_dir)
     end
@@ -27,28 +23,6 @@ RSpec.describe ICU4X::DataGenerator do
 
         expect(output_path).to exist
         expect(output_path.size).to be > 0
-      end
-
-      it "warns when 'und' locale is automatically included", :slow do
-        ICU4X::DataGenerator.export(
-          locales: %w[en],
-          markers: %w[PluralsCardinalV1],
-          format: :blob,
-          output: output_path
-        )
-
-        expect(Kernel).to have_received(:warn).with(/'und' locale automatically included/)
-      end
-
-      it "does not warn when 'und' locale is included", :slow do
-        ICU4X::DataGenerator.export(
-          locales: %w[en und],
-          markers: %w[PluralsCardinalV1],
-          format: :blob,
-          output: output_path
-        )
-
-        expect(Kernel).not_to have_received(:warn)
       end
 
       it "creates a blob that can be loaded by DataProvider", :slow do
@@ -74,6 +48,79 @@ RSpec.describe ICU4X::DataGenerator do
 
         expect(output_path).to exist
         expect(output_path.size).to be > 0
+      end
+    end
+
+    context "with symbolic locale specifiers" do
+      it "accepts :full for all locales", :slow do
+        ICU4X::DataGenerator.export(
+          locales: :full,
+          markers: %w[PluralsCardinalV1],
+          format: :blob,
+          output: output_path
+        )
+
+        expect(output_path).to exist
+        expect(output_path.size).to be > 0
+      end
+
+      it "accepts :modern for modern coverage locales", :slow do
+        ICU4X::DataGenerator.export(
+          locales: :modern,
+          markers: %w[PluralsCardinalV1],
+          format: :blob,
+          output: output_path
+        )
+
+        expect(output_path).to exist
+        expect(output_path.size).to be > 0
+      end
+
+      it "accepts :moderate for moderate coverage locales", :slow do
+        ICU4X::DataGenerator.export(
+          locales: :moderate,
+          markers: %w[PluralsCardinalV1],
+          format: :blob,
+          output: output_path
+        )
+
+        expect(output_path).to exist
+        expect(output_path.size).to be > 0
+      end
+
+      it "accepts :basic for basic coverage locales", :slow do
+        ICU4X::DataGenerator.export(
+          locales: :basic,
+          markers: %w[PluralsCardinalV1],
+          format: :blob,
+          output: output_path
+        )
+
+        expect(output_path).to exist
+        expect(output_path.size).to be > 0
+      end
+
+      it "accepts :recommended for all coverage levels", :slow do
+        ICU4X::DataGenerator.export(
+          locales: :recommended,
+          markers: %w[PluralsCardinalV1],
+          format: :blob,
+          output: output_path
+        )
+
+        expect(output_path).to exist
+        expect(output_path.size).to be > 0
+      end
+
+      it "raises ArgumentError for unknown locale symbol" do
+        expect {
+          ICU4X::DataGenerator.export(
+            locales: :unknown,
+            markers: :all,
+            format: :blob,
+            output: output_path
+          )
+        }.to raise_error(ArgumentError, /unknown locale specifier: :unknown/)
       end
     end
 
