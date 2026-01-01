@@ -261,6 +261,53 @@ ICU4X::DataGenerator.available_markers
 
 ---
 
+## Rake Task
+
+A Rake task for generating data blobs as part of your build workflow.
+
+### Setup
+
+```ruby
+# Rakefile
+require "icu4x/rake_task"
+
+ICU4X::RakeTask.new do |t|
+  t.output = "data/icu4x.postcard"
+end
+```
+
+### Configuration Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `locales` | `:recommended` | Locale specifier or array of locale strings |
+| `markers` | `:all` | Data markers to include |
+| `output` | (required) | Output path relative to Rakefile |
+
+### Task Name
+
+Default task name is `icu4x:data:generate`. Customize by passing a name to the constructor:
+
+```ruby
+ICU4X::RakeTask.new("myapp:generate_data") do |t|
+  t.output = "data/icu4x.postcard"
+end
+```
+
+### Usage
+
+```bash
+rake icu4x:data:generate  # Generate (skips if file exists)
+rake clobber              # Remove generated file
+```
+
+### Behavior
+
+- Implemented as a `file` task: generation is skipped if output file already exists
+- Output file is automatically added to `CLOBBER` for cleanup
+
+---
+
 ## Notes
 
 - No data is bundled with the gem
