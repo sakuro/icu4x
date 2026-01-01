@@ -2,6 +2,7 @@ name: Release Publish
 
 # This workflow handles the actual gem publishing after PR merge.
 # Most validations are already performed by the Release Validation workflow.
+# Builds precompiled gems for multiple platforms using cross-compilation.
 
 env:
   GEM_NAME: ${{ github.event.repository.name }}
@@ -12,8 +13,59 @@ on:
     branches: [main]
 
 jobs:
-  publish-release:
+  cross-gem:
+    name: Build native gem for ${{ matrix.platform }}
     if: github.event.pull_request.merged == true && startsWith(github.head_ref, 'release-v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - x86_64-linux
+          - aarch64-linux
+          - x86_64-darwin
+          - arm64-darwin
+          - x64-mingw-ucrt
+
+    steps:
+    - name: Extract version from branch name
+      id: version
+      env:
+        BRANCH_NAME: ${{ github.head_ref }}
+      run: |
+        VERSION=${BRANCH_NAME#release-v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Checkout release tag
+      uses: actions/checkout@v5
+      with:
+        ref: ${{ steps.version.outputs.tag }}
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: "3.2"
+        bundler-cache: true
+
+    - name: Cross-compile gem
+      uses: oxidize-rb/actions/cross-gem@v1
+      id: cross-gem
+      with:
+        platform: ${{ matrix.platform }}
+        ruby-versions: "3.2,3.3,3.4,4.0"
+
+    - name: Upload cross-compiled gem
+      uses: actions/upload-artifact@v4
+      with:
+        name: cross-gem-${{ matrix.platform }}
+        path: ${{ steps.cross-gem.outputs.gem-path }}
+        if-no-files-found: error
+
+  publish:
+    name: Publish gems
+    needs: cross-gem
     runs-on: ubuntu-latest
     permissions:
       contents: write      # Required for GitHub Release creation
@@ -42,16 +94,28 @@ jobs:
         ruby-version: "3.2"
         bundler-cache: true
 
-    - name: Build gem
-      run: |
-        bundle exec rake build
+    - name: Build source gem
+      run: bundle exec rake build
+
+    - name: Download all cross-compiled gems
+      uses: actions/download-artifact@v4
+      with:
+        path: pkg/
+        pattern: cross-gem-*
+        merge-multiple: true
+
+    - name: List gems to publish
+      run: ls -la pkg/
 
     - name: Configure RubyGems credentials for Trusted Publishing
       uses: rubygems/configure-rubygems-credentials@v1.0.0
 
-    - name: Push gem to RubyGems
+    - name: Push all gems to RubyGems
       run: |
-        gem push pkg/${{ env.GEM_NAME }}-${{ steps.version.outputs.version }}.gem
+        for gem in pkg/*.gem; do
+          echo "Pushing $gem..."
+          gem push "$gem"
+        done
 
     - name: Extract changelog for this version
       run: |
@@ -62,14 +126,17 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        # Create release with changelog and gem file
+        # Create release with changelog and all gem files
         gh release create ${{ steps.version.outputs.tag }} \
           --title "${{ env.GEM_NAME }} ${{ steps.version.outputs.tag }}" \
           --notes-file release_notes.md \
-          pkg/${{ env.GEM_NAME }}-${{ steps.version.outputs.version }}.gem
+          pkg/*.gem
 
     - name: Post-release summary
       run: |
-        echo "🎉 Release ${{ steps.version.outputs.tag }} published successfully!"
-        echo "- Gem built from tagged commit and published to RubyGems"
+        echo "Release ${{ steps.version.outputs.tag }} published successfully!"
+        echo "- Source gem and precompiled gems published to RubyGems"
         echo "- GitHub release created with changelog and assets"
+        echo ""
+        echo "Published gems:"
+        ls pkg/*.gem

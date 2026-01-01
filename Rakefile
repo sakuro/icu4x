@@ -9,6 +9,14 @@ CLOBBER.include("doc/api", "pkg", "lib/**/*.bundle", "lib/**/*.so", "lib/**/*.dl
 require "rb_sys/extensiontask"
 RbSys::ExtensionTask.new("icu4x") do |ext|
   ext.lib_dir = "lib/icu4x"
+  ext.cross_compile = true
+  ext.cross_platform = %w[
+    x86_64-linux
+    aarch64-linux
+    x86_64-darwin
+    arm64-darwin
+    x64-mingw-ucrt
+  ]
 end
 
 require "rubocop/rake_task"
