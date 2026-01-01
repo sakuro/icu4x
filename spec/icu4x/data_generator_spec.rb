@@ -29,7 +29,7 @@ RSpec.describe ICU4X::DataGenerator do
         expect(output_path.size).to be > 0
       end
 
-      it "warns when 'und' locale is not included", :slow do
+      it "warns when 'und' locale is automatically included", :slow do
         ICU4X::DataGenerator.export(
           locales: %w[en],
           markers: %w[PluralsCardinalV1],
@@ -37,7 +37,7 @@ RSpec.describe ICU4X::DataGenerator do
           output: output_path
         )
 
-        expect(Kernel).to have_received(:warn).with(/'und' locale not included/)
+        expect(Kernel).to have_received(:warn).with(/'und' locale automatically included/)
       end
 
       it "does not warn when 'und' locale is included", :slow do

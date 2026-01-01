@@ -196,6 +196,7 @@ provider = ICU4X::DataProvider.from_blob(Pathname.new("path/to/data.blob"), prio
 - Fallback follows the locale hierarchy, not arbitrary language preferences.
   - Example: `ja` will NOT fall back to `en`. It falls back to `und` (undetermined).
 - For data to be available via fallback, it must be included when generating the blob file.
+- The `und` locale is automatically included when generating data to ensure fallback support.
 
 ---
 
@@ -209,6 +210,7 @@ A class for generating locale data blob files.
 module ICU4X
   class DataGenerator
     # Export locale data
+    # The `und` locale is automatically included for fallback support.
     # @param locales [Array<String>] Locales to include
     # @param markers [Symbol, Array<String>] Data markers (:all or specific markers)
     # @param format [Symbol] Output format (:blob)
