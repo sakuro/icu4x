@@ -26,7 +26,7 @@ jobs:
       uses: actions/checkout@v5
       with:
         fetch-depth: 0
-        token: ${{ secrets.WORKFLOW_UPDATE_TOKEN }}
+        token: ${{ secrets.WORKFLOW_TOKEN }}
 
     - name: Set git user
       uses: git-actions/set-user@v1
@@ -91,7 +91,7 @@ jobs:
 
     - name: Create Pull Request
       env:
-        GH_TOKEN: ${{ secrets.WORKFLOW_UPDATE_TOKEN }}
+        GH_TOKEN: ${{ secrets.WORKFLOW_TOKEN }}
       run: |
         # Generate PR body based on whether this is the first release
         if [ "${{ steps.check_first_release.outputs.is_first_release }}" = "true" ]; then
