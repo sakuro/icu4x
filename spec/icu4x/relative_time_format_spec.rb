@@ -84,12 +84,12 @@ RSpec.describe ICU4X::RelativeTimeFormat do
 
       it "raises ArgumentError for invalid style" do
         expect { ICU4X::RelativeTimeFormat.new(locale, provider:, style: :invalid) }
-          .to raise_error(ArgumentError, /style must be :long, :short, or :narrow/)
+          .to raise_error(ArgumentError, /style must be :long, :short, :narrow/)
       end
 
       it "raises ArgumentError for invalid numeric" do
         expect { ICU4X::RelativeTimeFormat.new(locale, provider:, numeric: :invalid) }
-          .to raise_error(ArgumentError, /numeric must be :always or :auto/)
+          .to raise_error(ArgumentError, /numeric must be :always, :auto/)
       end
 
       it "raises TypeError when provider is invalid type" do
@@ -270,7 +270,7 @@ RSpec.describe ICU4X::RelativeTimeFormat do
 
       it "raises ArgumentError for invalid unit" do
         expect { rtf.format(-1, :invalid) }
-          .to raise_error(ArgumentError, /unit must be :second, :minute, :hour, :day, :week, :month, :quarter, or :year/)
+          .to raise_error(ArgumentError, /unit must be :second, :minute, :hour, :day, :week, :month, :quarter, :year/)
       end
     end
   end

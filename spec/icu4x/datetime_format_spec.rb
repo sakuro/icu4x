@@ -69,12 +69,12 @@ RSpec.describe ICU4X::DateTimeFormat do
 
       it "raises ArgumentError when date_style is invalid" do
         expect { ICU4X::DateTimeFormat.new(locale, provider:, date_style: :invalid) }
-          .to raise_error(ArgumentError, /date_style must be :full, :long, :medium, or :short/)
+          .to raise_error(ArgumentError, /date_style must be :full, :long, :medium, :short/)
       end
 
       it "raises ArgumentError when time_style is invalid" do
         expect { ICU4X::DateTimeFormat.new(locale, provider:, time_style: :invalid) }
-          .to raise_error(ArgumentError, /time_style must be :full, :long, :medium, or :short/)
+          .to raise_error(ArgumentError, /time_style must be :full, :long, :medium, :short/)
       end
 
       it "raises ArgumentError when calendar is invalid" do

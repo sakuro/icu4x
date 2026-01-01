@@ -3,13 +3,14 @@ use crate::helpers;
 use icu::list::ListFormatter;
 use icu::list::options::{ListFormatterOptions, ListLength};
 use icu_provider::buf::AsDeserializingBufferProvider;
+use icu4x_macros::FromRubySymbol;
 use magnus::{
     Error, ExceptionClass, RArray, RHash, RModule, Ruby, Symbol, TryConvert, Value, function,
     method, prelude::*,
 };
 
 /// The type of list formatting
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
 enum ListType {
     Conjunction,
     Disjunction,
@@ -27,7 +28,7 @@ impl ListType {
 }
 
 /// The style of list formatting
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
 enum ListStyle {
     Long,
     Short,
@@ -89,43 +90,17 @@ impl ListFormat {
         // Extract type option (default: :conjunction)
         let type_value: Option<Symbol> =
             kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("type"))?;
-        let conjunction_sym = ruby.to_symbol("conjunction");
-        let disjunction_sym = ruby.to_symbol("disjunction");
-        let unit_sym = ruby.to_symbol("unit");
-        let type_sym = type_value.unwrap_or(conjunction_sym);
-
-        let list_type = if type_sym.equal(conjunction_sym)? {
-            ListType::Conjunction
-        } else if type_sym.equal(disjunction_sym)? {
-            ListType::Disjunction
-        } else if type_sym.equal(unit_sym)? {
-            ListType::Unit
-        } else {
-            return Err(Error::new(
-                ruby.exception_arg_error(),
-                "type must be :conjunction, :disjunction, or :unit",
-            ));
+        let list_type = match type_value {
+            Some(sym) => ListType::from_ruby_symbol(ruby, sym, "type")?,
+            None => ListType::Conjunction,
         };
 
         // Extract style option (default: :long)
         let style_value: Option<Symbol> =
             kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("style"))?;
-        let long_sym = ruby.to_symbol("long");
-        let short_sym = ruby.to_symbol("short");
-        let narrow_sym = ruby.to_symbol("narrow");
-        let style_sym = style_value.unwrap_or(long_sym);
-
-        let list_style = if style_sym.equal(long_sym)? {
-            ListStyle::Long
-        } else if style_sym.equal(short_sym)? {
-            ListStyle::Short
-        } else if style_sym.equal(narrow_sym)? {
-            ListStyle::Narrow
-        } else {
-            return Err(Error::new(
-                ruby.exception_arg_error(),
-                "style must be :long, :short, or :narrow",
-            ));
+        let list_style = match style_value {
+            Some(sym) => ListStyle::from_ruby_symbol(ruby, sym, "style")?,
+            None => ListStyle::Long,
         };
 
         // Get the error exception class

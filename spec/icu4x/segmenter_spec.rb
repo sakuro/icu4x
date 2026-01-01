@@ -69,7 +69,7 @@ RSpec.describe ICU4X::Segmenter do
 
       it "raises ArgumentError for invalid granularity" do
         expect { ICU4X::Segmenter.new(granularity: :invalid) }
-          .to raise_error(ArgumentError, /granularity must be :grapheme, :word, :sentence, or :line/)
+          .to raise_error(ArgumentError, /granularity must be :grapheme, :word, :sentence, :line/)
       end
 
       it "raises TypeError when provider is invalid type" do

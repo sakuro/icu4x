@@ -71,7 +71,7 @@ RSpec.describe ICU4X::NumberFormat do
 
       it "raises ArgumentError when style is invalid" do
         expect { ICU4X::NumberFormat.new(locale, provider:, style: :invalid) }
-          .to raise_error(ArgumentError, /style must be :decimal, :percent, or :currency/)
+          .to raise_error(ArgumentError, /style must be :decimal, :percent, :currency/)
       end
 
       it "raises ArgumentError when style is :currency but currency is missing" do

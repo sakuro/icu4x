@@ -13,6 +13,7 @@ use icu::experimental::dimension::percent::formatter::{
 };
 use icu::experimental::dimension::percent::options::PercentFormatterOptions;
 use icu_provider::buf::AsDeserializingBufferProvider;
+use icu4x_macros::FromRubySymbol;
 use magnus::{
     Error, ExceptionClass, RHash, RModule, Ruby, Symbol, TryConvert, Value, function, method,
     prelude::*,
@@ -20,7 +21,7 @@ use magnus::{
 use tinystr::TinyAsciiStr;
 
 /// The style of number formatting
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
 enum Style {
     Decimal,
     Percent,
@@ -28,7 +29,7 @@ enum Style {
 }
 
 /// Rounding mode for number formatting
-#[derive(Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, Default, FromRubySymbol)]
 enum RoundingMode {
     Ceil,
     Floor,
@@ -126,22 +127,9 @@ impl NumberFormat {
         // Extract style option (default: :decimal)
         let style_value: Option<Symbol> =
             kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("style"))?;
-        let decimal_sym = ruby.to_symbol("decimal");
-        let percent_sym = ruby.to_symbol("percent");
-        let currency_sym = ruby.to_symbol("currency");
-        let style_sym = style_value.unwrap_or(decimal_sym);
-
-        let style = if style_sym.equal(decimal_sym)? {
-            Style::Decimal
-        } else if style_sym.equal(percent_sym)? {
-            Style::Percent
-        } else if style_sym.equal(currency_sym)? {
-            Style::Currency
-        } else {
-            return Err(Error::new(
-                ruby.exception_arg_error(),
-                "style must be :decimal, :percent, or :currency",
-            ));
+        let style = match style_value {
+            Some(sym) => Style::from_ruby_symbol(ruby, sym, "style")?,
+            None => Style::Decimal,
         };
 
         // Extract currency option (required for currency style)
@@ -169,7 +157,12 @@ impl NumberFormat {
             Self::extract_digit_option(ruby, &kwargs, "maximum_fraction_digits")?;
 
         // Extract rounding_mode option (default: :half_expand)
-        let rounding_mode = Self::extract_rounding_mode(ruby, &kwargs)?;
+        let rounding_mode_value: Option<Symbol> =
+            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("rounding_mode"))?;
+        let rounding_mode = match rounding_mode_value {
+            Some(sym) => RoundingMode::from_ruby_symbol(ruby, sym, "rounding_mode")?,
+            None => RoundingMode::default(),
+        };
 
         // Get the error exception class
         let error_class: ExceptionClass = ruby
@@ -256,51 +249,6 @@ impl NumberFormat {
             maximum_fraction_digits,
             rounding_mode,
         })
-    }
-
-    /// Extract rounding_mode option from kwargs
-    fn extract_rounding_mode(ruby: &Ruby, kwargs: &RHash) -> Result<RoundingMode, Error> {
-        let mode_sym: Option<Symbol> =
-            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("rounding_mode"))?;
-
-        let Some(sym) = mode_sym else {
-            return Ok(RoundingMode::default());
-        };
-
-        let ceil = ruby.to_symbol("ceil");
-        let floor = ruby.to_symbol("floor");
-        let expand = ruby.to_symbol("expand");
-        let trunc = ruby.to_symbol("trunc");
-        let half_ceil = ruby.to_symbol("half_ceil");
-        let half_floor = ruby.to_symbol("half_floor");
-        let half_expand = ruby.to_symbol("half_expand");
-        let half_trunc = ruby.to_symbol("half_trunc");
-        let half_even = ruby.to_symbol("half_even");
-
-        if sym.equal(ceil)? {
-            Ok(RoundingMode::Ceil)
-        } else if sym.equal(floor)? {
-            Ok(RoundingMode::Floor)
-        } else if sym.equal(expand)? {
-            Ok(RoundingMode::Expand)
-        } else if sym.equal(trunc)? {
-            Ok(RoundingMode::Trunc)
-        } else if sym.equal(half_ceil)? {
-            Ok(RoundingMode::HalfCeil)
-        } else if sym.equal(half_floor)? {
-            Ok(RoundingMode::HalfFloor)
-        } else if sym.equal(half_expand)? {
-            Ok(RoundingMode::HalfExpand)
-        } else if sym.equal(half_trunc)? {
-            Ok(RoundingMode::HalfTrunc)
-        } else if sym.equal(half_even)? {
-            Ok(RoundingMode::HalfEven)
-        } else {
-            Err(Error::new(
-                ruby.exception_arg_error(),
-                "rounding_mode must be :ceil, :floor, :expand, :trunc, :half_ceil, :half_floor, :half_expand, :half_trunc, or :half_even",
-            ))
-        }
     }
 
     /// Extract a digit option from kwargs with validation
