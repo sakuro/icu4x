@@ -75,12 +75,17 @@ impl DataGenerator {
             locale_families.push(family);
         }
 
-        // Warn if 'und' locale is not included
+        // Automatically include 'und' locale if not specified
         if !has_und {
+            let family = DataLocaleFamily::with_descendants(
+                "und".parse().expect("'und' is a valid locale"),
+            );
+            locale_families.push(family);
+
             let kernel: Value = ruby.eval("Kernel")?;
             let _: Value = kernel.funcall(
                 "warn",
-                ("ICU4X::DataGenerator.export: 'und' locale not included. Fallback may fail for unlisted locales.",),
+                ("ICU4X::DataGenerator.export: 'und' locale automatically included for fallback support.",),
             )?;
         }
 

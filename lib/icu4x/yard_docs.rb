@@ -112,6 +112,9 @@
 #     class DataGenerator
 #       # Exports locale data to a file.
 #       #
+#       # The +und+ (undetermined) locale is automatically included if not specified,
+#       # as it provides essential fallback data for ICU4X operations.
+#       #
 #       # @param locales [Array<String>] list of locale identifiers to include
 #       # @param markers [Symbol, Array<String>] data markers to include;
 #       #   use +:all+ for all markers, or specify individual marker names
