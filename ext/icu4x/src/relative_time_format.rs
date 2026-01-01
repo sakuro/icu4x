@@ -6,13 +6,14 @@ use icu::experimental::relativetime::{
     RelativeTimeFormatter, RelativeTimeFormatterOptions, RelativeTimeFormatterPreferences,
 };
 use icu_provider::buf::AsDeserializingBufferProvider;
+use icu4x_macros::FromRubySymbol;
 use magnus::{
     Error, ExceptionClass, RHash, RModule, Ruby, Symbol, TryConvert, Value, function, method,
     prelude::*,
 };
 
 /// The style of relative time formatting
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
 enum Style {
     Long,
     Short,
@@ -30,7 +31,7 @@ impl Style {
 }
 
 /// The numeric mode for relative time formatting
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
 enum NumericMode {
     Always,
     Auto,
@@ -53,7 +54,7 @@ impl NumericMode {
 }
 
 /// Time unit for relative time formatting
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, FromRubySymbol)]
 enum Unit {
     Second,
     Minute,
@@ -66,40 +67,6 @@ enum Unit {
 }
 
 impl Unit {
-    fn from_symbol(ruby: &Ruby, sym: Symbol) -> Result<Self, Error> {
-        let second_sym = ruby.to_symbol("second");
-        let minute_sym = ruby.to_symbol("minute");
-        let hour_sym = ruby.to_symbol("hour");
-        let day_sym = ruby.to_symbol("day");
-        let week_sym = ruby.to_symbol("week");
-        let month_sym = ruby.to_symbol("month");
-        let quarter_sym = ruby.to_symbol("quarter");
-        let year_sym = ruby.to_symbol("year");
-
-        if sym.equal(second_sym)? {
-            Ok(Unit::Second)
-        } else if sym.equal(minute_sym)? {
-            Ok(Unit::Minute)
-        } else if sym.equal(hour_sym)? {
-            Ok(Unit::Hour)
-        } else if sym.equal(day_sym)? {
-            Ok(Unit::Day)
-        } else if sym.equal(week_sym)? {
-            Ok(Unit::Week)
-        } else if sym.equal(month_sym)? {
-            Ok(Unit::Month)
-        } else if sym.equal(quarter_sym)? {
-            Ok(Unit::Quarter)
-        } else if sym.equal(year_sym)? {
-            Ok(Unit::Year)
-        } else {
-            Err(Error::new(
-                ruby.exception_arg_error(),
-                "unit must be :second, :minute, :hour, :day, :week, :month, :quarter, or :year",
-            ))
-        }
-    }
-
     fn index(self) -> usize {
         match self {
             Unit::Second => 0,
@@ -153,40 +120,17 @@ impl RelativeTimeFormat {
         // Extract style option (default: :long)
         let style_value: Option<Symbol> =
             kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("style"))?;
-        let long_sym = ruby.to_symbol("long");
-        let short_sym = ruby.to_symbol("short");
-        let narrow_sym = ruby.to_symbol("narrow");
-        let style_sym = style_value.unwrap_or(long_sym);
-
-        let style = if style_sym.equal(long_sym)? {
-            Style::Long
-        } else if style_sym.equal(short_sym)? {
-            Style::Short
-        } else if style_sym.equal(narrow_sym)? {
-            Style::Narrow
-        } else {
-            return Err(Error::new(
-                ruby.exception_arg_error(),
-                "style must be :long, :short, or :narrow",
-            ));
+        let style = match style_value {
+            Some(sym) => Style::from_ruby_symbol(ruby, sym, "style")?,
+            None => Style::Long,
         };
 
         // Extract numeric option (default: :always)
         let numeric_value: Option<Symbol> =
             kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("numeric"))?;
-        let always_sym = ruby.to_symbol("always");
-        let auto_sym = ruby.to_symbol("auto");
-        let numeric_sym = numeric_value.unwrap_or(always_sym);
-
-        let numeric = if numeric_sym.equal(always_sym)? {
-            NumericMode::Always
-        } else if numeric_sym.equal(auto_sym)? {
-            NumericMode::Auto
-        } else {
-            return Err(Error::new(
-                ruby.exception_arg_error(),
-                "numeric must be :always or :auto",
-            ));
+        let numeric = match numeric_value {
+            Some(sym) => NumericMode::from_ruby_symbol(ruby, sym, "numeric")?,
+            None => NumericMode::Always,
         };
 
         // Get the error exception class
@@ -300,7 +244,7 @@ impl RelativeTimeFormat {
     fn format(&self, value: i64, unit: Symbol) -> Result<String, Error> {
         let ruby = Ruby::get().expect("Ruby runtime should be available");
 
-        let unit = Unit::from_symbol(&ruby, unit)?;
+        let unit = Unit::from_ruby_symbol(&ruby, unit, "unit")?;
         let formatter = &self.formatters[unit.index()];
 
         // Convert i64 to Decimal

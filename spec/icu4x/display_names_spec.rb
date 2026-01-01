@@ -95,17 +95,17 @@ RSpec.describe ICU4X::DisplayNames do
 
       it "raises ArgumentError when type is invalid" do
         expect { ICU4X::DisplayNames.new(locale, provider:, type: :invalid) }
-          .to raise_error(ArgumentError, /type must be :language, :region, :script, or :locale/)
+          .to raise_error(ArgumentError, /type must be :language, :region, :script, :locale/)
       end
 
       it "raises ArgumentError when style is invalid" do
         expect { ICU4X::DisplayNames.new(locale, provider:, type: :language, style: :invalid) }
-          .to raise_error(ArgumentError, /style must be :long, :short, or :narrow/)
+          .to raise_error(ArgumentError, /style must be :long, :short, :narrow/)
       end
 
       it "raises ArgumentError when fallback is invalid" do
         expect { ICU4X::DisplayNames.new(locale, provider:, type: :language, fallback: :invalid) }
-          .to raise_error(ArgumentError, /fallback must be :code or :none/)
+          .to raise_error(ArgumentError, /fallback must be :code, :none/)
       end
 
       it "raises TypeError when provider is invalid type" do

@@ -6,13 +6,14 @@ use icu::segmenter::{
     WordSegmenterBorrowed,
 };
 use icu_provider::buf::AsDeserializingBufferProvider;
+use icu4x_macros::FromRubySymbol;
 use magnus::{
     Error, ExceptionClass, RArray, RClass, RHash, RModule, Ruby, Symbol, TryConvert, Value,
     function, method, prelude::*,
 };
 
 /// Granularity level for segmentation
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
 enum Granularity {
     Grapheme,
     Word,
@@ -74,26 +75,7 @@ impl Segmenter {
             .ok_or_else(|| {
                 Error::new(ruby.exception_arg_error(), "missing keyword: :granularity")
             })?;
-
-        let grapheme_sym = ruby.to_symbol("grapheme");
-        let word_sym = ruby.to_symbol("word");
-        let sentence_sym = ruby.to_symbol("sentence");
-        let line_sym = ruby.to_symbol("line");
-
-        let granularity = if granularity_value.equal(grapheme_sym)? {
-            Granularity::Grapheme
-        } else if granularity_value.equal(word_sym)? {
-            Granularity::Word
-        } else if granularity_value.equal(sentence_sym)? {
-            Granularity::Sentence
-        } else if granularity_value.equal(line_sym)? {
-            Granularity::Line
-        } else {
-            return Err(Error::new(
-                ruby.exception_arg_error(),
-                "granularity must be :grapheme, :word, :sentence, or :line",
-            ));
-        };
+        let granularity = Granularity::from_ruby_symbol(ruby, granularity_value, "granularity")?;
 
         // Extract provider (optional for grapheme, recommended for others)
         let provider_value: Option<Value> =

@@ -5,6 +5,7 @@ use icu::collator::CollatorPreferences;
 use icu::collator::options::{CaseLevel, CollatorOptions, Strength};
 use icu::collator::preferences::{CollationCaseFirst, CollationNumericOrdering};
 use icu_provider::buf::AsDeserializingBufferProvider;
+use icu4x_macros::FromRubySymbol;
 use magnus::{
     Error, ExceptionClass, RHash, RModule, Ruby, Symbol, TryConvert, Value, function, method,
     prelude::*,
@@ -12,7 +13,7 @@ use magnus::{
 use std::cmp::Ordering;
 
 /// Sensitivity level for collation
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
 enum Sensitivity {
     Base,
     Accent,
@@ -32,7 +33,7 @@ impl Sensitivity {
 }
 
 /// Case first option
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
 enum CaseFirstOption {
     Upper,
     Lower,
@@ -93,25 +94,9 @@ impl Collator {
         // Extract sensitivity option (default: :variant)
         let sensitivity_value: Option<Symbol> =
             kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("sensitivity"))?;
-        let base_sym = ruby.to_symbol("base");
-        let accent_sym = ruby.to_symbol("accent");
-        let case_sym = ruby.to_symbol("case");
-        let variant_sym = ruby.to_symbol("variant");
-        let sensitivity_sym = sensitivity_value.unwrap_or(variant_sym);
-
-        let sensitivity = if sensitivity_sym.equal(base_sym)? {
-            Sensitivity::Base
-        } else if sensitivity_sym.equal(accent_sym)? {
-            Sensitivity::Accent
-        } else if sensitivity_sym.equal(case_sym)? {
-            Sensitivity::Case
-        } else if sensitivity_sym.equal(variant_sym)? {
-            Sensitivity::Variant
-        } else {
-            return Err(Error::new(
-                ruby.exception_arg_error(),
-                "sensitivity must be :base, :accent, :case, or :variant",
-            ));
+        let sensitivity = match sensitivity_value {
+            Some(sym) => Sensitivity::from_ruby_symbol(ruby, sym, "sensitivity")?,
+            None => Sensitivity::Variant,
         };
 
         // Extract numeric option (default: false)
@@ -122,22 +107,9 @@ impl Collator {
         // Extract case_first option (default: nil)
         let case_first_value: Option<Symbol> =
             kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("case_first"))?;
-        let upper_sym = ruby.to_symbol("upper");
-        let lower_sym = ruby.to_symbol("lower");
-
-        let case_first = if let Some(sym) = case_first_value {
-            if sym.equal(upper_sym)? {
-                Some(CaseFirstOption::Upper)
-            } else if sym.equal(lower_sym)? {
-                Some(CaseFirstOption::Lower)
-            } else {
-                return Err(Error::new(
-                    ruby.exception_arg_error(),
-                    "case_first must be :upper, :lower, or nil",
-                ));
-            }
-        } else {
-            None
+        let case_first = match case_first_value {
+            Some(sym) => Some(CaseFirstOption::from_ruby_symbol(ruby, sym, "case_first")?),
+            None => None,
         };
 
         // Get the error exception class

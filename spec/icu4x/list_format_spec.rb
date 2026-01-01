@@ -84,12 +84,12 @@ RSpec.describe ICU4X::ListFormat do
 
       it "raises ArgumentError for invalid type" do
         expect { ICU4X::ListFormat.new(locale, provider:, type: :invalid) }
-          .to raise_error(ArgumentError, /type must be :conjunction, :disjunction, or :unit/)
+          .to raise_error(ArgumentError, /type must be :conjunction, :disjunction, :unit/)
       end
 
       it "raises ArgumentError for invalid style" do
         expect { ICU4X::ListFormat.new(locale, provider:, style: :invalid) }
-          .to raise_error(ArgumentError, /style must be :long, :short, or :narrow/)
+          .to raise_error(ArgumentError, /style must be :long, :short, :narrow/)
       end
 
       it "raises TypeError when provider is invalid type" do

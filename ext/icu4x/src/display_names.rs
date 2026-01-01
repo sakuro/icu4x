@@ -6,13 +6,14 @@ use icu::experimental::displaynames::{
 };
 use icu_locale::LanguageIdentifier;
 use icu_provider::buf::AsDeserializingBufferProvider;
+use icu4x_macros::FromRubySymbol;
 use magnus::{
     Error, ExceptionClass, RHash, RModule, Ruby, Symbol, TryConvert, Value, function, method,
     prelude::*,
 };
 
 /// Display name type
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
 enum DisplayNamesType {
     Language,
     Region,
@@ -32,7 +33,7 @@ impl DisplayNamesType {
 }
 
 /// Display name style
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
 enum DisplayNamesStyle {
     Long,
     Short,
@@ -58,7 +59,7 @@ impl DisplayNamesStyle {
 }
 
 /// Display name fallback option
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
 enum DisplayNamesFallback {
     Code,
     None,
@@ -125,68 +126,25 @@ impl DisplayNames {
         let resolved_provider = helpers::resolve_provider(ruby, &kwargs)?;
 
         // Extract type (required)
-        let type_value: Option<Symbol> =
-            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("type"))?;
-        let type_sym = type_value
+        let type_value: Symbol = kwargs
+            .lookup::<_, Option<Symbol>>(ruby.to_symbol("type"))?
             .ok_or_else(|| Error::new(ruby.exception_arg_error(), "missing keyword: :type"))?;
-
-        let language_sym = ruby.to_symbol("language");
-        let region_sym = ruby.to_symbol("region");
-        let script_sym = ruby.to_symbol("script");
-        let locale_sym = ruby.to_symbol("locale");
-
-        let display_type = if type_sym.equal(language_sym)? {
-            DisplayNamesType::Language
-        } else if type_sym.equal(region_sym)? {
-            DisplayNamesType::Region
-        } else if type_sym.equal(script_sym)? {
-            DisplayNamesType::Script
-        } else if type_sym.equal(locale_sym)? {
-            DisplayNamesType::Locale
-        } else {
-            return Err(Error::new(
-                ruby.exception_arg_error(),
-                "type must be :language, :region, :script, or :locale",
-            ));
-        };
+        let display_type = DisplayNamesType::from_ruby_symbol(ruby, type_value, "type")?;
 
         // Extract style option (default: :long)
         let style_value: Option<Symbol> =
             kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("style"))?;
-        let long_sym = ruby.to_symbol("long");
-        let short_sym = ruby.to_symbol("short");
-        let narrow_sym = ruby.to_symbol("narrow");
-        let style_sym = style_value.unwrap_or(long_sym);
-
-        let style = if style_sym.equal(long_sym)? {
-            DisplayNamesStyle::Long
-        } else if style_sym.equal(short_sym)? {
-            DisplayNamesStyle::Short
-        } else if style_sym.equal(narrow_sym)? {
-            DisplayNamesStyle::Narrow
-        } else {
-            return Err(Error::new(
-                ruby.exception_arg_error(),
-                "style must be :long, :short, or :narrow",
-            ));
+        let style = match style_value {
+            Some(sym) => DisplayNamesStyle::from_ruby_symbol(ruby, sym, "style")?,
+            None => DisplayNamesStyle::Long,
         };
 
         // Extract fallback option (default: :code)
         let fallback_value: Option<Symbol> =
             kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("fallback"))?;
-        let code_sym = ruby.to_symbol("code");
-        let none_sym = ruby.to_symbol("none");
-        let fallback_sym = fallback_value.unwrap_or(code_sym);
-
-        let fallback = if fallback_sym.equal(code_sym)? {
-            DisplayNamesFallback::Code
-        } else if fallback_sym.equal(none_sym)? {
-            DisplayNamesFallback::None
-        } else {
-            return Err(Error::new(
-                ruby.exception_arg_error(),
-                "fallback must be :code or :none",
-            ));
+        let fallback = match fallback_value {
+            Some(sym) => DisplayNamesFallback::from_ruby_symbol(ruby, sym, "fallback")?,
+            None => DisplayNamesFallback::Code,
         };
 
         // Get the error exception class

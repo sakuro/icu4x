@@ -90,12 +90,12 @@ RSpec.describe ICU4X::Collator do
 
       it "raises ArgumentError for invalid sensitivity" do
         expect { ICU4X::Collator.new(locale, provider:, sensitivity: :invalid) }
-          .to raise_error(ArgumentError, /sensitivity must be :base, :accent, :case, or :variant/)
+          .to raise_error(ArgumentError, /sensitivity must be :base, :accent, :case, :variant/)
       end
 
       it "raises ArgumentError for invalid case_first" do
         expect { ICU4X::Collator.new(locale, provider:, case_first: :invalid) }
-          .to raise_error(ArgumentError, /case_first must be :upper, :lower, or nil/)
+          .to raise_error(ArgumentError, /case_first must be :upper, :lower/)
       end
 
       it "raises TypeError when provider is invalid type" do

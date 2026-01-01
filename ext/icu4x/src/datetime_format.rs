@@ -11,6 +11,7 @@ use icu::datetime::{DateTimeFormatter, DateTimeFormatterPreferences};
 use icu::time::Time;
 use icu::time::zone::IanaParser;
 use icu_provider::buf::AsDeserializingBufferProvider;
+use icu4x_macros::FromRubySymbol;
 use jiff::Timestamp;
 use jiff::tz::TimeZone;
 use magnus::{
@@ -19,7 +20,7 @@ use magnus::{
 };
 
 /// Date style option
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
 enum DateStyle {
     Full,
     Long,
@@ -39,7 +40,7 @@ impl DateStyle {
 }
 
 /// Time style option
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
 enum TimeStyle {
     Full,
     Long,
@@ -59,7 +60,7 @@ impl TimeStyle {
 }
 
 /// Calendar option
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
 enum Calendar {
     Gregory,
     Japanese,
@@ -174,10 +175,20 @@ impl DateTimeFormat {
         let resolved_provider = helpers::resolve_provider(ruby, &kwargs)?;
 
         // Extract date_style option
-        let date_style = Self::extract_date_style(ruby, &kwargs)?;
+        let date_style_value: Option<Symbol> =
+            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("date_style"))?;
+        let date_style = match date_style_value {
+            Some(sym) => Some(DateStyle::from_ruby_symbol(ruby, sym, "date_style")?),
+            None => None,
+        };
 
         // Extract time_style option
-        let time_style = Self::extract_time_style(ruby, &kwargs)?;
+        let time_style_value: Option<Symbol> =
+            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("time_style"))?;
+        let time_style = match time_style_value {
+            Some(sym) => Some(TimeStyle::from_ruby_symbol(ruby, sym, "time_style")?),
+            None => None,
+        };
 
         // At least one of date_style or time_style must be specified
         if date_style.is_none() && time_style.is_none() {
@@ -215,7 +226,12 @@ impl DateTimeFormat {
         };
 
         // Extract calendar option
-        let calendar = Self::extract_calendar(ruby, &kwargs)?;
+        let calendar_value: Option<Symbol> =
+            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("calendar"))?;
+        let calendar = match calendar_value {
+            Some(sym) => Some(Calendar::from_ruby_symbol(ruby, sym, "calendar")?),
+            None => None,
+        };
 
         // Get the error exception class
         let error_class: ExceptionClass = ruby
@@ -260,120 +276,6 @@ impl DateTimeFormat {
             jiff_timezone,
             calendar: resolved_calendar,
         })
-    }
-
-    /// Extract calendar option from kwargs
-    fn extract_calendar(ruby: &Ruby, kwargs: &RHash) -> Result<Option<Calendar>, Error> {
-        let calendar_value: Option<Symbol> =
-            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("calendar"))?;
-
-        let Some(sym) = calendar_value else {
-            return Ok(None);
-        };
-
-        let gregory = ruby.to_symbol("gregory");
-        let japanese = ruby.to_symbol("japanese");
-        let buddhist = ruby.to_symbol("buddhist");
-        let chinese = ruby.to_symbol("chinese");
-        let hebrew = ruby.to_symbol("hebrew");
-        let islamic = ruby.to_symbol("islamic");
-        let persian = ruby.to_symbol("persian");
-        let indian = ruby.to_symbol("indian");
-        let ethiopian = ruby.to_symbol("ethiopian");
-        let coptic = ruby.to_symbol("coptic");
-        let roc = ruby.to_symbol("roc");
-        let dangi = ruby.to_symbol("dangi");
-
-        if sym.equal(gregory)? {
-            Ok(Some(Calendar::Gregory))
-        } else if sym.equal(japanese)? {
-            Ok(Some(Calendar::Japanese))
-        } else if sym.equal(buddhist)? {
-            Ok(Some(Calendar::Buddhist))
-        } else if sym.equal(chinese)? {
-            Ok(Some(Calendar::Chinese))
-        } else if sym.equal(hebrew)? {
-            Ok(Some(Calendar::Hebrew))
-        } else if sym.equal(islamic)? {
-            Ok(Some(Calendar::Islamic))
-        } else if sym.equal(persian)? {
-            Ok(Some(Calendar::Persian))
-        } else if sym.equal(indian)? {
-            Ok(Some(Calendar::Indian))
-        } else if sym.equal(ethiopian)? {
-            Ok(Some(Calendar::Ethiopian))
-        } else if sym.equal(coptic)? {
-            Ok(Some(Calendar::Coptic))
-        } else if sym.equal(roc)? {
-            Ok(Some(Calendar::Roc))
-        } else if sym.equal(dangi)? {
-            Ok(Some(Calendar::Dangi))
-        } else {
-            Err(Error::new(
-                ruby.exception_arg_error(),
-                "calendar must be :gregory, :japanese, :buddhist, :chinese, :hebrew, :islamic, :persian, :indian, :ethiopian, :coptic, :roc, or :dangi",
-            ))
-        }
-    }
-
-    /// Extract date_style option from kwargs
-    fn extract_date_style(ruby: &Ruby, kwargs: &RHash) -> Result<Option<DateStyle>, Error> {
-        let style_value: Option<Symbol> =
-            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("date_style"))?;
-
-        let Some(sym) = style_value else {
-            return Ok(None);
-        };
-
-        let full = ruby.to_symbol("full");
-        let long = ruby.to_symbol("long");
-        let medium = ruby.to_symbol("medium");
-        let short = ruby.to_symbol("short");
-
-        if sym.equal(full)? {
-            Ok(Some(DateStyle::Full))
-        } else if sym.equal(long)? {
-            Ok(Some(DateStyle::Long))
-        } else if sym.equal(medium)? {
-            Ok(Some(DateStyle::Medium))
-        } else if sym.equal(short)? {
-            Ok(Some(DateStyle::Short))
-        } else {
-            Err(Error::new(
-                ruby.exception_arg_error(),
-                "date_style must be :full, :long, :medium, or :short",
-            ))
-        }
-    }
-
-    /// Extract time_style option from kwargs
-    fn extract_time_style(ruby: &Ruby, kwargs: &RHash) -> Result<Option<TimeStyle>, Error> {
-        let style_value: Option<Symbol> =
-            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("time_style"))?;
-
-        let Some(sym) = style_value else {
-            return Ok(None);
-        };
-
-        let full = ruby.to_symbol("full");
-        let long = ruby.to_symbol("long");
-        let medium = ruby.to_symbol("medium");
-        let short = ruby.to_symbol("short");
-
-        if sym.equal(full)? {
-            Ok(Some(TimeStyle::Full))
-        } else if sym.equal(long)? {
-            Ok(Some(TimeStyle::Long))
-        } else if sym.equal(medium)? {
-            Ok(Some(TimeStyle::Medium))
-        } else if sym.equal(short)? {
-            Ok(Some(TimeStyle::Short))
-        } else {
-            Err(Error::new(
-                ruby.exception_arg_error(),
-                "time_style must be :full, :long, :medium, or :short",
-            ))
-        }
     }
 
     /// Create field set based on date_style and time_style
