@@ -16,11 +16,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          token: ${{ secrets.WORKFLOW_UPDATE_TOKEN }}
+          token: ${{ secrets.WORKFLOW_TOKEN }}
 
       - name: Get Ruby versions and update files
         env:
-          GITHUB_TOKEN: ${{ secrets.WORKFLOW_UPDATE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.WORKFLOW_TOKEN }}
         run: |
           # Get Ruby versions directly from branches.yml
           ruby_data=$(gh api -H "Accept: application/vnd.github.raw" repos/ruby/www.ruby-lang.org/contents/_data/branches.yml | \
@@ -56,7 +56,7 @@ jobs:
 
       - name: Create Pull Request
         env:
-          GITHUB_TOKEN: ${{ secrets.WORKFLOW_UPDATE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.WORKFLOW_TOKEN }}
         run: |
           # Check if there are changes
           if git diff --quiet .rubocop.yml mise.toml .github/workflows/ci.yml .github/workflows/release-*.yml *.gemspec; then
