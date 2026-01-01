@@ -53,14 +53,20 @@ ICU4X::DataGenerator.export(
 ```ruby
 require "icu4x"
 
-# Load locale data
+# Option 1: Configure default provider (recommended)
+ICU4X.configure do |config|
+  config.data_path = Pathname.new("data/i18n.blob")
+end
+# Or set ICU4X_DATA_PATH environment variable
+
+# Option 2: Load provider explicitly
 provider = ICU4X::DataProvider.from_blob(Pathname.new("data/i18n.blob"))
 
 # Parse locale (BCP 47 or POSIX format)
 locale = ICU4X::Locale.parse("ja-JP")
 locale = ICU4X::Locale.parse_posix("ja_JP.UTF-8")  # POSIX format also supported
 
-# Date/time formatting
+# Date/time formatting (provider: can be omitted if default is configured)
 dtf = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long)
 dtf.format(Time.now)
 # => "2025年12月30日"
