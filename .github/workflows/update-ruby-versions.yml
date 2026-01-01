@@ -38,6 +38,9 @@ jobs:
           rm -f .github/workflows/release-validation.yml.bak
           sed -i.bak "s/ruby-version: \"[0-9.]\+\"/ruby-version: \"$min_version\"/" .github/workflows/release-publish.yml
           rm -f .github/workflows/release-publish.yml.bak
+          ruby_csv=$(echo "$ruby_data" | jq -r '.ruby | join(",")')
+          sed -i.bak "s/ruby-versions: \"[0-9.,]\+\"/ruby-versions: \"$ruby_csv\"/" .github/workflows/release-publish.yml
+          rm -f .github/workflows/release-publish.yml.bak
           sed -i.bak "s/ruby: \[.*\]/ruby: [$ruby_array]/" .github/workflows/ci.yml
           rm -f .github/workflows/ci.yml.bak
 
@@ -81,6 +84,7 @@ jobs:
           This PR updates:
           - `.github/workflows/ci.yml` test matrix to include all maintained Ruby versions
           - `.github/workflows/release-*.yml` ruby-version to match the minimum Ruby version
+          - `.github/workflows/release-publish.yml` ruby-versions for cross-compilation targets
           - `.rubocop.yml` TargetRubyVersion to match the minimum Ruby version
           - `*.gemspec` required_ruby_version to match the minimum Ruby version
           - `mise.toml` ruby version to match the minimum Ruby version
