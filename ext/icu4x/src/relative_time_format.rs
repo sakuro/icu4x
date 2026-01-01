@@ -110,9 +110,7 @@ impl RelativeTimeFormat {
                 .unwrap_or(NumericMode::Always);
 
         // Get the error exception class
-        let error_class: ExceptionClass = ruby
-            .eval("ICU4X::Error")
-            .unwrap_or_else(|_| ruby.exception_runtime_error());
+        let error_class = helpers::get_exception_class(ruby, "ICU4X::Error");
 
         // Get the DataProvider
         let dp: &DataProvider = TryConvert::try_convert(resolved_provider).map_err(|_| {

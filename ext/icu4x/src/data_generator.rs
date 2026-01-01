@@ -1,10 +1,11 @@
+use crate::helpers;
 use icu_provider::DataMarkerInfo;
 use icu_provider_blob::export::BlobExporter;
 use icu_provider_export::prelude::*;
 use icu_provider_source::SourceDataProvider;
 use magnus::{
-    Error, ExceptionClass, RArray, RClass, RHash, RModule, Ruby, Symbol, Value, function,
-    prelude::*, value::ReprValue,
+    Error, RArray, RClass, RHash, RModule, Ruby, Symbol, Value, function, prelude::*,
+    value::ReprValue,
 };
 use std::collections::HashMap;
 use std::fs::File;
@@ -207,9 +208,7 @@ impl DataGenerator {
         let exporter = BlobExporter::new_with_sink(Box::new(sink));
 
         driver.export(&source_provider, exporter).map_err(|e| {
-            let error_class: ExceptionClass = ruby
-                .eval("ICU4X::DataGeneratorError")
-                .unwrap_or_else(|_| ruby.exception_runtime_error());
+            let error_class = helpers::get_exception_class(ruby, "ICU4X::DataGeneratorError");
             Error::new(error_class, format!("Data export failed: {}", e))
         })?;
 

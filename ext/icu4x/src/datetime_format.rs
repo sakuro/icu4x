@@ -15,7 +15,7 @@ use icu4x_macros::RubySymbol;
 use jiff::Timestamp;
 use jiff::tz::TimeZone;
 use magnus::{
-    Error, ExceptionClass, RHash, RModule, Ruby, TryConvert, Value, function, method, prelude::*,
+    Error, RHash, RModule, Ruby, TryConvert, Value, function, method, prelude::*,
 };
 
 /// Date style option
@@ -182,9 +182,7 @@ impl DateTimeFormat {
             helpers::extract_symbol(ruby, &kwargs, "calendar", Calendar::from_ruby_symbol)?;
 
         // Get the error exception class
-        let error_class: ExceptionClass = ruby
-            .eval("ICU4X::Error")
-            .unwrap_or_else(|_| ruby.exception_runtime_error());
+        let error_class = helpers::get_exception_class(ruby, "ICU4X::Error");
 
         // Get the DataProvider
         let dp: &DataProvider = TryConvert::try_convert(resolved_provider).map_err(|_| {

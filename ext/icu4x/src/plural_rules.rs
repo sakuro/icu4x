@@ -6,8 +6,7 @@ use icu::plurals::{
 };
 use icu_provider::buf::AsDeserializingBufferProvider;
 use magnus::{
-    Error, ExceptionClass, RArray, RHash, RModule, Ruby, Symbol, TryConvert, Value, function,
-    method, prelude::*,
+    Error, RArray, RHash, RModule, Ruby, Symbol, TryConvert, Value, function, method, prelude::*,
 };
 
 /// Ruby wrapper for ICU4X PluralRules
@@ -64,9 +63,7 @@ impl PluralRules {
         };
 
         // Get the error exception class
-        let error_class: ExceptionClass = ruby
-            .eval("ICU4X::Error")
-            .unwrap_or_else(|_| ruby.exception_runtime_error());
+        let error_class = helpers::get_exception_class(ruby, "ICU4X::Error");
 
         // Get the DataProvider
         let dp: &DataProvider = TryConvert::try_convert(resolved_provider).map_err(|_| {

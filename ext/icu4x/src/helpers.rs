@@ -1,6 +1,6 @@
 use crate::locale::Locale;
 use icu_locale::Locale as IcuLocale;
-use magnus::{Error, RHash, RModule, Ruby, Symbol, TryConvert, Value, prelude::*};
+use magnus::{Error, ExceptionClass, RHash, RModule, Ruby, Symbol, TryConvert, Value, prelude::*};
 
 /// Resolves the provider from kwargs or falls back to the default provider.
 ///
@@ -25,6 +25,19 @@ pub fn resolve_provider(ruby: &Ruby, kwargs: &RHash) -> Result<Value, Error> {
             Ok(default)
         }
     }
+}
+
+/// Gets the specified exception class, falling back to RuntimeError.
+///
+/// # Arguments
+/// * `ruby` - The Ruby runtime reference
+/// * `name` - The fully qualified exception class name (e.g., "ICU4X::Error")
+///
+/// # Returns
+/// The requested exception class, or RuntimeError if not found.
+pub fn get_exception_class(ruby: &Ruby, name: &str) -> ExceptionClass {
+    ruby.eval(name)
+        .unwrap_or_else(|_| ruby.exception_runtime_error())
 }
 
 /// Extracts and validates the locale from variadic arguments.
