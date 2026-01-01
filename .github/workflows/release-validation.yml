@@ -57,16 +57,15 @@ jobs:
           exit 1
         fi
 
-    - name: Check if git tag already exists
+    - name: Verify git tag exists
       run: |
+        # Tag should exist because release-preparation creates it before the PR
         if git tag | grep -q "^${{ steps.version.outputs.tag }}$"; then
-          if [ "${{ github.event.action }}" != "synchronize" ]; then
-            echo "❌ Error: Git tag ${{ steps.version.outputs.tag }} already exists"
-            echo "This should only happen if the tag was created outside the release process"
-            exit 1
-          else
-            echo "Tag ${{ steps.version.outputs.tag }} exists and will be updated to latest commit"
-          fi
+          echo "✅ Git tag ${{ steps.version.outputs.tag }} exists"
+        else
+          echo "❌ Error: Git tag ${{ steps.version.outputs.tag }} does not exist"
+          echo "The release-preparation workflow should have created this tag"
+          exit 1
         fi
 
     - name: Check if version already released on RubyGems
@@ -107,10 +106,9 @@ jobs:
         echo "✅ Release validation passed for v${{ steps.version.outputs.version }}"
         echo "- Version format is valid"
         echo "- Version consistency verified"
+        echo "- Git tag exists"
         if [ "${{ github.event.action }}" == "synchronize" ]; then
           echo "- Git tag updated to latest commit"
-        else
-          echo "- Git tag validated"
         fi
         echo "- Version not yet on RubyGems"
         echo "- CHANGELOG.md is properly formatted"
