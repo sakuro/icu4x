@@ -9,8 +9,7 @@ use icu::segmenter::{
 use icu_provider::buf::AsDeserializingBufferProvider;
 use icu4x_macros::RubySymbol;
 use magnus::{
-    Error, ExceptionClass, RArray, RClass, RHash, RModule, Ruby, TryConvert, Value, function,
-    method, prelude::*,
+    Error, RArray, RClass, RHash, RModule, Ruby, TryConvert, Value, function, method, prelude::*,
 };
 
 /// Granularity level for segmentation
@@ -71,9 +70,7 @@ impl Segmenter {
             kwargs.lookup::<_, Option<Value>>(ruby.to_symbol("provider"))?;
 
         // Get the error exception class
-        let error_class: ExceptionClass = ruby
-            .eval("ICU4X::Error")
-            .unwrap_or_else(|_| ruby.exception_runtime_error());
+        let error_class = helpers::get_exception_class(ruby, "ICU4X::Error");
 
         // Create the appropriate segmenter
         let inner = match granularity {

@@ -1,5 +1,6 @@
+use crate::helpers;
 use icu_locale::Locale as IcuLocale;
-use magnus::{Error, ExceptionClass, RHash, RModule, Ruby, function, method, prelude::*};
+use magnus::{Error, RHash, RModule, Ruby, function, method, prelude::*};
 use std::cell::RefCell;
 
 /// Ruby wrapper for ICU4X Locale
@@ -9,17 +10,11 @@ pub struct Locale {
 }
 
 impl Locale {
-    /// Get the LocaleError exception class
-    fn locale_error_class(ruby: &Ruby) -> ExceptionClass {
-        ruby.eval("ICU4X::LocaleError")
-            .unwrap_or_else(|_| ruby.exception_runtime_error())
-    }
-
     /// Parse a BCP 47 locale string
     fn parse(ruby: &Ruby, s: String) -> Result<Self, Error> {
         let locale: IcuLocale = s.parse().map_err(|e| {
             Error::new(
-                Self::locale_error_class(ruby),
+                helpers::get_exception_class(ruby, "ICU4X::LocaleError"),
                 format!("Invalid locale: {e}"),
             )
         })?;
@@ -43,7 +38,7 @@ impl Locale {
         // Handle empty string
         if posix_str.is_empty() {
             return Err(Error::new(
-                Self::locale_error_class(ruby),
+                helpers::get_exception_class(ruby, "ICU4X::LocaleError"),
                 "Invalid POSIX locale: empty string",
             ));
         }
@@ -71,7 +66,7 @@ impl Locale {
             Some(lang) if !lang.is_empty() => *lang,
             _ => {
                 return Err(Error::new(
-                    Self::locale_error_class(ruby),
+                    helpers::get_exception_class(ruby, "ICU4X::LocaleError"),
                     format!("Invalid POSIX locale: {}", posix_str),
                 ));
             }

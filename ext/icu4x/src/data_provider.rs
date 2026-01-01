@@ -1,9 +1,10 @@
+use crate::helpers;
 use icu::locale::fallback::LocaleFallbacker;
 use icu_provider_adapters::fallback::LocaleFallbackProvider;
 use icu_provider_blob::BlobDataProvider;
 use magnus::{
-    Error, ExceptionClass, RClass, RHash, RModule, Ruby, Symbol, TryConvert, Value, function,
-    prelude::*, value::ReprValue,
+    Error, RClass, RHash, RModule, Ruby, Symbol, TryConvert, Value, function, prelude::*,
+    value::ReprValue,
 };
 use std::fs;
 use std::path::PathBuf;
@@ -108,13 +109,8 @@ impl DataProvider {
         let blob_provider =
             BlobDataProvider::try_new_from_static_blob(static_blob).map_err(|e| {
                 // Get the DataError exception class
-                let data_error_class: ExceptionClass = ruby
-                    .eval("ICU4X::DataError")
-                    .unwrap_or_else(|_| ruby.exception_runtime_error());
-                Error::new(
-                    data_error_class,
-                    format!("Failed to create data provider: {}", e),
-                )
+                let data_error_class = helpers::get_exception_class(ruby, "ICU4X::DataError");
+                Error::new(data_error_class, format!("Failed to create data provider: {}", e))
             })?;
 
         // Create the LocaleFallbacker with compiled data
