@@ -11,7 +11,7 @@ use icu::datetime::{DateTimeFormatter, DateTimeFormatterPreferences};
 use icu::time::Time;
 use icu::time::zone::IanaParser;
 use icu_provider::buf::AsDeserializingBufferProvider;
-use icu4x_macros::FromRubySymbol;
+use icu4x_macros::RubySymbol;
 use jiff::Timestamp;
 use jiff::tz::TimeZone;
 use magnus::{
@@ -20,7 +20,7 @@ use magnus::{
 };
 
 /// Date style option
-#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
+#[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
 enum DateStyle {
     Full,
     Long,
@@ -28,19 +28,8 @@ enum DateStyle {
     Short,
 }
 
-impl DateStyle {
-    fn to_symbol_name(self) -> &'static str {
-        match self {
-            DateStyle::Full => "full",
-            DateStyle::Long => "long",
-            DateStyle::Medium => "medium",
-            DateStyle::Short => "short",
-        }
-    }
-}
-
 /// Time style option
-#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
+#[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
 enum TimeStyle {
     Full,
     Long,
@@ -48,19 +37,8 @@ enum TimeStyle {
     Short,
 }
 
-impl TimeStyle {
-    fn to_symbol_name(self) -> &'static str {
-        match self {
-            TimeStyle::Full => "full",
-            TimeStyle::Long => "long",
-            TimeStyle::Medium => "medium",
-            TimeStyle::Short => "short",
-        }
-    }
-}
-
 /// Calendar option
-#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
+#[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
 enum Calendar {
     Gregory,
     Japanese,
@@ -77,23 +55,6 @@ enum Calendar {
 }
 
 impl Calendar {
-    fn to_symbol_name(self) -> &'static str {
-        match self {
-            Calendar::Gregory => "gregory",
-            Calendar::Japanese => "japanese",
-            Calendar::Buddhist => "buddhist",
-            Calendar::Chinese => "chinese",
-            Calendar::Hebrew => "hebrew",
-            Calendar::Islamic => "islamic",
-            Calendar::Persian => "persian",
-            Calendar::Indian => "indian",
-            Calendar::Ethiopian => "ethiopian",
-            Calendar::Coptic => "coptic",
-            Calendar::Roc => "roc",
-            Calendar::Dangi => "dangi",
-        }
-    }
-
     fn to_calendar_algorithm(self) -> CalendarAlgorithm {
         match self {
             Calendar::Gregory => CalendarAlgorithm::Gregory,

@@ -18,12 +18,14 @@ fn to_snake_case(s: &str) -> String {
     result
 }
 
-/// Derive macro for converting Ruby symbols to Rust enums.
+/// Derive macro for Ruby symbol conversion.
+///
+/// Generates both `from_ruby_symbol` and `to_symbol_name` methods.
 ///
 /// # Example
 ///
 /// ```ignore
-/// #[derive(FromRubySymbol)]
+/// #[derive(RubySymbol)]
 /// enum RoundingMode {
 ///     Ceil,       // matches :ceil
 ///     Floor,      // matches :floor
@@ -35,20 +37,24 @@ fn to_snake_case(s: &str) -> String {
 ///
 /// ```ignore
 /// impl RoundingMode {
-///     pub fn from_ruby_symbol(ruby: &magnus::Ruby, sym: magnus::Symbol) -> Result<Self, magnus::Error> {
+///     pub fn from_ruby_symbol(ruby: &magnus::Ruby, sym: magnus::Symbol, key_name: &str) -> Result<Self, magnus::Error> {
+///         // ... conversion logic
+///     }
+///
+///     pub fn to_symbol_name(self) -> &'static str {
 ///         // ... conversion logic
 ///     }
 /// }
 /// ```
-#[proc_macro_derive(FromRubySymbol)]
-pub fn from_ruby_symbol_derive(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(RubySymbol)]
+pub fn ruby_symbol_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
 
     // Extract enum variants
     let variants = match &input.data {
         syn::Data::Enum(data) => &data.variants,
-        _ => panic!("FromRubySymbol can only be derived for enums"),
+        _ => panic!("RubySymbol can only be derived for enums"),
     };
 
     // Generate match arms for each variant
@@ -69,6 +75,15 @@ pub fn from_ruby_symbol_derive(input: TokenStream) -> TokenStream {
         .collect();
     let valid_symbols = symbol_names.join(", ");
 
+    // Generate match arms for to_symbol_name
+    let to_symbol_arms = variants.iter().map(|variant| {
+        let variant_name = &variant.ident;
+        let symbol_name = to_snake_case(&variant_name.to_string());
+        quote! {
+            Self::#variant_name => #symbol_name,
+        }
+    });
+
     // Generate the impl
     let expanded = quote! {
         impl #name {
@@ -87,6 +102,13 @@ pub fn from_ruby_symbol_derive(input: TokenStream) -> TokenStream {
                     ruby.exception_arg_error(),
                     format!("{} must be {}", key_name, #valid_symbols),
                 ))
+            }
+
+            /// Convert this enum variant to its symbol name.
+            pub fn to_symbol_name(self) -> &'static str {
+                match self {
+                    #(#to_symbol_arms)*
+                }
             }
         }
     };

@@ -6,32 +6,22 @@ use icu::experimental::relativetime::{
     RelativeTimeFormatter, RelativeTimeFormatterOptions, RelativeTimeFormatterPreferences,
 };
 use icu_provider::buf::AsDeserializingBufferProvider;
-use icu4x_macros::FromRubySymbol;
+use icu4x_macros::RubySymbol;
 use magnus::{
     Error, ExceptionClass, RHash, RModule, Ruby, Symbol, TryConvert, Value, function, method,
     prelude::*,
 };
 
 /// The style of relative time formatting
-#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
+#[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
 enum Style {
     Long,
     Short,
     Narrow,
 }
 
-impl Style {
-    fn to_symbol_name(self) -> &'static str {
-        match self {
-            Style::Long => "long",
-            Style::Short => "short",
-            Style::Narrow => "narrow",
-        }
-    }
-}
-
 /// The numeric mode for relative time formatting
-#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
+#[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
 enum NumericMode {
     Always,
     Auto,
@@ -44,17 +34,10 @@ impl NumericMode {
             NumericMode::Auto => Numeric::Auto,
         }
     }
-
-    fn to_symbol_name(self) -> &'static str {
-        match self {
-            NumericMode::Always => "always",
-            NumericMode::Auto => "auto",
-        }
-    }
 }
 
 /// Time unit for relative time formatting
-#[derive(Clone, Copy, PartialEq, Eq, Hash, FromRubySymbol)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, RubySymbol)]
 enum Unit {
     Second,
     Minute,

@@ -13,7 +13,7 @@ use icu::experimental::dimension::percent::formatter::{
 };
 use icu::experimental::dimension::percent::options::PercentFormatterOptions;
 use icu_provider::buf::AsDeserializingBufferProvider;
-use icu4x_macros::FromRubySymbol;
+use icu4x_macros::RubySymbol;
 use magnus::{
     Error, ExceptionClass, RHash, RModule, Ruby, Symbol, TryConvert, Value, function, method,
     prelude::*,
@@ -21,7 +21,7 @@ use magnus::{
 use tinystr::TinyAsciiStr;
 
 /// The style of number formatting
-#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
+#[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
 enum Style {
     Decimal,
     Percent,
@@ -29,7 +29,7 @@ enum Style {
 }
 
 /// Rounding mode for number formatting
-#[derive(Clone, Copy, PartialEq, Eq, Default, FromRubySymbol)]
+#[derive(Clone, Copy, PartialEq, Eq, Default, RubySymbol)]
 enum RoundingMode {
     Ceil,
     Floor,
@@ -59,20 +59,6 @@ impl RoundingMode {
                 SignedRoundingMode::Unsigned(UnsignedRoundingMode::HalfTrunc)
             }
             RoundingMode::HalfEven => SignedRoundingMode::Unsigned(UnsignedRoundingMode::HalfEven),
-        }
-    }
-
-    fn to_symbol_name(self) -> &'static str {
-        match self {
-            RoundingMode::Ceil => "ceil",
-            RoundingMode::Floor => "floor",
-            RoundingMode::Expand => "expand",
-            RoundingMode::Trunc => "trunc",
-            RoundingMode::HalfCeil => "half_ceil",
-            RoundingMode::HalfFloor => "half_floor",
-            RoundingMode::HalfExpand => "half_expand",
-            RoundingMode::HalfTrunc => "half_trunc",
-            RoundingMode::HalfEven => "half_even",
         }
     }
 }
