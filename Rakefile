@@ -19,31 +19,34 @@ RbSys::ExtensionTask.new("icu4x") do |ext|
   ]
 end
 
-require "rubocop/rake_task"
-RuboCop::RakeTask.new
+# Development tasks are not needed during cross-compilation (RUBY_TARGET is set by rb-sys-dock)
+unless ENV["RUBY_TARGET"]
+  require "rubocop/rake_task"
+  RuboCop::RakeTask.new
 
-require "rspec/core/rake_task"
-RSpec::Core::RakeTask.new(:spec)
+  require "rspec/core/rake_task"
+  RSpec::Core::RakeTask.new(:spec)
 
-TEST_BLOB = "spec/fixtures/test-data.postcard"
-TEST_BLOB_LOCALES = %w[en ja ru ar de und].freeze
+  TEST_BLOB = "spec/fixtures/test-data.postcard"
+  TEST_BLOB_LOCALES = %w[en ja ru ar de und].freeze
 
-directory "spec/fixtures"
+  directory "spec/fixtures"
 
-file TEST_BLOB => ["spec/fixtures", :compile] do |t|
-  require "icu4x"
-  require "pathname"
-  ICU4X::DataGenerator.export(
-    locales: TEST_BLOB_LOCALES,
-    markers: :all,
-    format: :blob,
-    output: Pathname.new(t.name)
-  )
+  file TEST_BLOB => ["spec/fixtures", :compile] do |t|
+    require "icu4x"
+    require "pathname"
+    ICU4X::DataGenerator.export(
+      locales: TEST_BLOB_LOCALES,
+      markers: :all,
+      format: :blob,
+      output: Pathname.new(t.name)
+    )
+  end
+
+  Rake::Task[:spec].enhance([TEST_BLOB])
+
+  require "yard"
+  YARD::Rake::YardocTask.new(:doc)
+
+  task default: %i[spec rubocop]
 end
-
-Rake::Task[:spec].enhance([TEST_BLOB])
-
-require "yard"
-YARD::Rake::YardocTask.new(:doc)
-
-task default: %i[spec rubocop]
