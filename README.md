@@ -11,9 +11,14 @@ No locale data is bundled with the gem. Users generate only the data they need, 
 ## Features
 
 - **Locale** - BCP 47 and POSIX locale identifier parsing
-- **DateTimeFormat** - Locale-aware date/time formatting with timezone support
+- **DateTimeFormat** - Locale-aware date/time formatting with timezone and calendar support
 - **NumberFormat** - Number, currency, and percent formatting
 - **PluralRules** - CLDR plural category selection (cardinal/ordinal)
+- **Collator** - Locale-sensitive string comparison and sorting
+- **ListFormat** - Locale-aware list formatting (and, or, unit)
+- **RelativeTimeFormat** - Relative time formatting (e.g., "3 days ago")
+- **DisplayNames** - Localized names for languages, regions, and scripts
+- **Segmenter** - Text segmentation (grapheme, word, sentence, line)
 - **DataProvider** - Locale data loading with automatic fallback
 - **DataGenerator** - Locale data generation from CLDR
 
@@ -69,6 +74,31 @@ nf.format(1_234_567)
 pr = ICU4X::PluralRules.new(ICU4X::Locale.parse("en"), provider:)
 pr.select(1)   # => :one
 pr.select(2)   # => :other
+
+# Collation (sorting)
+collator = ICU4X::Collator.new(locale, provider:)
+%w[メロン アップル なし].sort { |a, b| collator.compare(a, b) }
+# => ["アップル", "なし", "メロン"]
+
+# List formatting
+lf = ICU4X::ListFormat.new(locale, provider:, type: :conjunction)
+lf.format(%w[Apple Banana Cherry])
+# => "Apple、Banana、Cherry"
+
+# Relative time formatting
+rtf = ICU4X::RelativeTimeFormat.new(locale, provider:)
+rtf.format(-3, :day)
+# => "3日前"
+
+# Display names
+dn = ICU4X::DisplayNames.new(locale, provider:, type: :language)
+dn.of("en")
+# => "英語"
+
+# Text segmentation
+segmenter = ICU4X::Segmenter.new(granularity: :word, provider:)
+segmenter.segment("Hello, world!").map(&:text)
+# => ["Hello", ",", " ", "world", "!"]
 ```
 
 See [doc/](doc/) for detailed documentation.
