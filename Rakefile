@@ -30,22 +30,15 @@ unless ENV["RUBY_TARGET"]
   require "rspec/core/rake_task"
   RSpec::Core::RakeTask.new(:spec)
 
+  require "icu4x/rake_task"
   TEST_BLOB = "spec/fixtures/test-data.postcard"
-  TEST_BLOB_LOCALES = %w[en ja ru ar de und].freeze
 
-  directory "spec/fixtures"
-
-  file TEST_BLOB => ["spec/fixtures", :compile] do |t|
-    require "icu4x"
-    require "pathname"
-    ICU4X::DataGenerator.export(
-      locales: TEST_BLOB_LOCALES,
-      markers: :all,
-      format: :blob,
-      output: Pathname.new(t.name)
-    )
+  ICU4X::RakeTask.new do |t|
+    t.locales = %w[en ja ru ar de]
+    t.output = TEST_BLOB
   end
 
+  Rake::Task[TEST_BLOB].enhance([:compile])
   Rake::Task[:spec].enhance([TEST_BLOB])
 
   require "yard"
