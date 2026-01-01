@@ -7,7 +7,10 @@ CLEAN.include("coverage", ".rspec_status", ".yardoc")
 CLOBBER.include("doc/api", "pkg", "lib/**/*.bundle", "lib/**/*.so", "lib/**/*.dll", "spec/fixtures/*.postcard")
 
 require "rb_sys/extensiontask"
-RbSys::ExtensionTask.new("icu4x") do |ext|
+
+gemspec = Gem::Specification.load("icu4x.gemspec")
+
+RbSys::ExtensionTask.new("icu4x", gemspec) do |ext|
   ext.lib_dir = "lib/icu4x"
   ext.cross_compile = true
   ext.cross_platform = %w[
