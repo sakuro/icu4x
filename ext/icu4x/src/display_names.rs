@@ -8,8 +8,7 @@ use icu_locale::LanguageIdentifier;
 use icu_provider::buf::AsDeserializingBufferProvider;
 use icu4x_macros::RubySymbol;
 use magnus::{
-    Error, ExceptionClass, RHash, RModule, Ruby, Symbol, TryConvert, Value, function, method,
-    prelude::*,
+    Error, ExceptionClass, RHash, RModule, Ruby, TryConvert, Value, function, method, prelude::*,
 };
 
 /// Display name type
@@ -100,26 +99,23 @@ impl DisplayNames {
         let resolved_provider = helpers::resolve_provider(ruby, &kwargs)?;
 
         // Extract type (required)
-        let type_value: Symbol = kwargs
-            .lookup::<_, Option<Symbol>>(ruby.to_symbol("type"))?
-            .ok_or_else(|| Error::new(ruby.exception_arg_error(), "missing keyword: :type"))?;
-        let display_type = DisplayNamesType::from_ruby_symbol(ruby, type_value, "type")?;
+        let display_type =
+            helpers::extract_symbol(ruby, &kwargs, "type", DisplayNamesType::from_ruby_symbol)?
+                .ok_or_else(|| Error::new(ruby.exception_arg_error(), "missing keyword: :type"))?;
 
         // Extract style option (default: :long)
-        let style_value: Option<Symbol> =
-            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("style"))?;
-        let style = match style_value {
-            Some(sym) => DisplayNamesStyle::from_ruby_symbol(ruby, sym, "style")?,
-            None => DisplayNamesStyle::Long,
-        };
+        let style =
+            helpers::extract_symbol(ruby, &kwargs, "style", DisplayNamesStyle::from_ruby_symbol)?
+                .unwrap_or(DisplayNamesStyle::Long);
 
         // Extract fallback option (default: :code)
-        let fallback_value: Option<Symbol> =
-            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("fallback"))?;
-        let fallback = match fallback_value {
-            Some(sym) => DisplayNamesFallback::from_ruby_symbol(ruby, sym, "fallback")?,
-            None => DisplayNamesFallback::Code,
-        };
+        let fallback = helpers::extract_symbol(
+            ruby,
+            &kwargs,
+            "fallback",
+            DisplayNamesFallback::from_ruby_symbol,
+        )?
+        .unwrap_or(DisplayNamesFallback::Code);
 
         // Get the error exception class
         let error_class: ExceptionClass = ruby

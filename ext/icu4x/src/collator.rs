@@ -7,8 +7,7 @@ use icu::collator::preferences::{CollationCaseFirst, CollationNumericOrdering};
 use icu_provider::buf::AsDeserializingBufferProvider;
 use icu4x_macros::RubySymbol;
 use magnus::{
-    Error, ExceptionClass, RHash, RModule, Ruby, Symbol, TryConvert, Value, function, method,
-    prelude::*,
+    Error, ExceptionClass, RHash, RModule, Ruby, TryConvert, Value, function, method, prelude::*,
 };
 use std::cmp::Ordering;
 
@@ -74,12 +73,9 @@ impl Collator {
         let resolved_provider = helpers::resolve_provider(ruby, &kwargs)?;
 
         // Extract sensitivity option (default: :variant)
-        let sensitivity_value: Option<Symbol> =
-            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("sensitivity"))?;
-        let sensitivity = match sensitivity_value {
-            Some(sym) => Sensitivity::from_ruby_symbol(ruby, sym, "sensitivity")?,
-            None => Sensitivity::Variant,
-        };
+        let sensitivity =
+            helpers::extract_symbol(ruby, &kwargs, "sensitivity", Sensitivity::from_ruby_symbol)?
+                .unwrap_or(Sensitivity::Variant);
 
         // Extract numeric option (default: false)
         let numeric: bool = kwargs
@@ -87,12 +83,12 @@ impl Collator {
             .unwrap_or(false);
 
         // Extract case_first option (default: nil)
-        let case_first_value: Option<Symbol> =
-            kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol("case_first"))?;
-        let case_first = match case_first_value {
-            Some(sym) => Some(CaseFirstOption::from_ruby_symbol(ruby, sym, "case_first")?),
-            None => None,
-        };
+        let case_first = helpers::extract_symbol(
+            ruby,
+            &kwargs,
+            "case_first",
+            CaseFirstOption::from_ruby_symbol,
+        )?;
 
         // Get the error exception class
         let error_class: ExceptionClass = ruby

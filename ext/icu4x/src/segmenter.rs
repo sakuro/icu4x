@@ -1,4 +1,5 @@
 use crate::data_provider::DataProvider;
+use crate::helpers;
 use icu::segmenter::options::{LineBreakOptions, SentenceBreakOptions, WordBreakOptions};
 use icu::segmenter::{
     GraphemeClusterSegmenter, GraphemeClusterSegmenterBorrowed, LineSegmenter,
@@ -8,8 +9,8 @@ use icu::segmenter::{
 use icu_provider::buf::AsDeserializingBufferProvider;
 use icu4x_macros::RubySymbol;
 use magnus::{
-    Error, ExceptionClass, RArray, RClass, RHash, RModule, Ruby, Symbol, TryConvert, Value,
-    function, method, prelude::*,
+    Error, ExceptionClass, RArray, RClass, RHash, RModule, Ruby, TryConvert, Value, function,
+    method, prelude::*,
 };
 
 /// Granularity level for segmentation
@@ -59,12 +60,11 @@ impl Segmenter {
         };
 
         // Extract granularity (required)
-        let granularity_value: Symbol = kwargs
-            .lookup::<_, Option<Symbol>>(ruby.to_symbol("granularity"))?
-            .ok_or_else(|| {
+        let granularity =
+            helpers::extract_symbol(ruby, &kwargs, "granularity", Granularity::from_ruby_symbol)?
+                .ok_or_else(|| {
                 Error::new(ruby.exception_arg_error(), "missing keyword: :granularity")
             })?;
-        let granularity = Granularity::from_ruby_symbol(ruby, granularity_value, "granularity")?;
 
         // Extract provider (optional for grapheme, recommended for others)
         let provider_value: Option<Value> =

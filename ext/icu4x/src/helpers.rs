@@ -1,6 +1,6 @@
 use crate::locale::Locale;
 use icu_locale::Locale as IcuLocale;
-use magnus::{Error, RHash, RModule, Ruby, TryConvert, Value, prelude::*};
+use magnus::{Error, RHash, RModule, Ruby, Symbol, TryConvert, Value, prelude::*};
 
 /// Resolves the provider from kwargs or falls back to the default provider.
 ///
@@ -52,4 +52,32 @@ pub fn extract_locale(ruby: &Ruby, args: &[Value]) -> Result<(IcuLocale, String)
     let icu_locale = locale_ref.clone();
     drop(locale_ref);
     Ok((icu_locale, locale_str))
+}
+
+/// Extracts a symbol option from kwargs and converts it using the provided converter function.
+///
+/// # Arguments
+/// * `ruby` - The Ruby runtime reference
+/// * `kwargs` - The keyword arguments hash
+/// * `key` - The key name to look up in kwargs
+/// * `converter` - Function to convert the Ruby Symbol to the target type
+///
+/// # Returns
+/// `Ok(Some(T))` if the key exists and was successfully converted,
+/// `Ok(None)` if the key doesn't exist,
+/// or an `Err` if conversion failed.
+pub fn extract_symbol<T, F>(
+    ruby: &Ruby,
+    kwargs: &RHash,
+    key: &str,
+    converter: F,
+) -> Result<Option<T>, Error>
+where
+    F: FnOnce(&Ruby, Symbol, &str) -> Result<T, Error>,
+{
+    let value: Option<Symbol> = kwargs.lookup::<_, Option<Symbol>>(ruby.to_symbol(key))?;
+    match value {
+        Some(sym) => Ok(Some(converter(ruby, sym, key)?)),
+        None => Ok(None),
+    }
 }
