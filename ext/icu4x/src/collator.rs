@@ -5,7 +5,7 @@ use icu::collator::CollatorPreferences;
 use icu::collator::options::{CaseLevel, CollatorOptions, Strength};
 use icu::collator::preferences::{CollationCaseFirst, CollationNumericOrdering};
 use icu_provider::buf::AsDeserializingBufferProvider;
-use icu4x_macros::FromRubySymbol;
+use icu4x_macros::RubySymbol;
 use magnus::{
     Error, ExceptionClass, RHash, RModule, Ruby, Symbol, TryConvert, Value, function, method,
     prelude::*,
@@ -13,7 +13,7 @@ use magnus::{
 use std::cmp::Ordering;
 
 /// Sensitivity level for collation
-#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
+#[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
 enum Sensitivity {
     Base,
     Accent,
@@ -21,32 +21,14 @@ enum Sensitivity {
     Variant,
 }
 
-impl Sensitivity {
-    fn to_symbol_name(self) -> &'static str {
-        match self {
-            Sensitivity::Base => "base",
-            Sensitivity::Accent => "accent",
-            Sensitivity::Case => "case",
-            Sensitivity::Variant => "variant",
-        }
-    }
-}
-
 /// Case first option
-#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
+#[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
 enum CaseFirstOption {
     Upper,
     Lower,
 }
 
 impl CaseFirstOption {
-    fn to_symbol_name(self) -> &'static str {
-        match self {
-            CaseFirstOption::Upper => "upper",
-            CaseFirstOption::Lower => "lower",
-        }
-    }
-
     fn to_icu_case_first(self) -> CollationCaseFirst {
         match self {
             CaseFirstOption::Upper => CollationCaseFirst::Upper,

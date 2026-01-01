@@ -3,32 +3,22 @@ use crate::helpers;
 use icu::list::ListFormatter;
 use icu::list::options::{ListFormatterOptions, ListLength};
 use icu_provider::buf::AsDeserializingBufferProvider;
-use icu4x_macros::FromRubySymbol;
+use icu4x_macros::RubySymbol;
 use magnus::{
     Error, ExceptionClass, RArray, RHash, RModule, Ruby, Symbol, TryConvert, Value, function,
     method, prelude::*,
 };
 
 /// The type of list formatting
-#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
+#[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
 enum ListType {
     Conjunction,
     Disjunction,
     Unit,
 }
 
-impl ListType {
-    fn to_symbol_name(self) -> &'static str {
-        match self {
-            ListType::Conjunction => "conjunction",
-            ListType::Disjunction => "disjunction",
-            ListType::Unit => "unit",
-        }
-    }
-}
-
 /// The style of list formatting
-#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
+#[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
 enum ListStyle {
     Long,
     Short,
@@ -41,14 +31,6 @@ impl ListStyle {
             ListStyle::Long => ListLength::Wide,
             ListStyle::Short => ListLength::Short,
             ListStyle::Narrow => ListLength::Narrow,
-        }
-    }
-
-    fn to_symbol_name(self) -> &'static str {
-        match self {
-            ListStyle::Long => "long",
-            ListStyle::Short => "short",
-            ListStyle::Narrow => "narrow",
         }
     }
 }

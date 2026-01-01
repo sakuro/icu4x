@@ -6,30 +6,19 @@ use icu::segmenter::{
     WordSegmenterBorrowed,
 };
 use icu_provider::buf::AsDeserializingBufferProvider;
-use icu4x_macros::FromRubySymbol;
+use icu4x_macros::RubySymbol;
 use magnus::{
     Error, ExceptionClass, RArray, RClass, RHash, RModule, Ruby, Symbol, TryConvert, Value,
     function, method, prelude::*,
 };
 
 /// Granularity level for segmentation
-#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
+#[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
 enum Granularity {
     Grapheme,
     Word,
     Sentence,
     Line,
-}
-
-impl Granularity {
-    fn to_symbol_name(self) -> &'static str {
-        match self {
-            Granularity::Grapheme => "grapheme",
-            Granularity::Word => "word",
-            Granularity::Sentence => "sentence",
-            Granularity::Line => "line",
-        }
-    }
 }
 
 /// Internal segmenter variants - using owned types

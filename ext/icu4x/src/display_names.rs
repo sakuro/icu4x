@@ -6,14 +6,14 @@ use icu::experimental::displaynames::{
 };
 use icu_locale::LanguageIdentifier;
 use icu_provider::buf::AsDeserializingBufferProvider;
-use icu4x_macros::FromRubySymbol;
+use icu4x_macros::RubySymbol;
 use magnus::{
     Error, ExceptionClass, RHash, RModule, Ruby, Symbol, TryConvert, Value, function, method,
     prelude::*,
 };
 
 /// Display name type
-#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
+#[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
 enum DisplayNamesType {
     Language,
     Region,
@@ -21,19 +21,8 @@ enum DisplayNamesType {
     Locale,
 }
 
-impl DisplayNamesType {
-    fn to_symbol_name(self) -> &'static str {
-        match self {
-            DisplayNamesType::Language => "language",
-            DisplayNamesType::Region => "region",
-            DisplayNamesType::Script => "script",
-            DisplayNamesType::Locale => "locale",
-        }
-    }
-}
-
 /// Display name style
-#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
+#[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
 enum DisplayNamesStyle {
     Long,
     Short,
@@ -41,14 +30,6 @@ enum DisplayNamesStyle {
 }
 
 impl DisplayNamesStyle {
-    fn to_symbol_name(self) -> &'static str {
-        match self {
-            DisplayNamesStyle::Long => "long",
-            DisplayNamesStyle::Short => "short",
-            DisplayNamesStyle::Narrow => "narrow",
-        }
-    }
-
     fn to_icu_style(self) -> Style {
         match self {
             DisplayNamesStyle::Long => Style::Long,
@@ -59,20 +40,13 @@ impl DisplayNamesStyle {
 }
 
 /// Display name fallback option
-#[derive(Clone, Copy, PartialEq, Eq, FromRubySymbol)]
+#[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
 enum DisplayNamesFallback {
     Code,
     None,
 }
 
 impl DisplayNamesFallback {
-    fn to_symbol_name(self) -> &'static str {
-        match self {
-            DisplayNamesFallback::Code => "code",
-            DisplayNamesFallback::None => "none",
-        }
-    }
-
     fn to_icu_fallback(self) -> Fallback {
         match self {
             DisplayNamesFallback::Code => Fallback::Code,
