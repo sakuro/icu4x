@@ -1,6 +1,5 @@
 use crate::data_provider::DataProvider;
 use crate::helpers;
-use crate::locale::Locale;
 use fixed_decimal::Decimal;
 use icu::experimental::relativetime::options::Numeric;
 use icu::experimental::relativetime::{
@@ -139,19 +138,7 @@ impl RelativeTimeFormat {
     /// * `numeric:` - :always (default), :auto
     fn new(ruby: &Ruby, args: &[Value]) -> Result<Self, Error> {
         // Parse arguments: (locale, **kwargs)
-        if args.is_empty() {
-            return Err(Error::new(
-                ruby.exception_arg_error(),
-                "wrong number of arguments (given 0, expected 1+)",
-            ));
-        }
-
-        // Get the locale
-        let locale: &Locale = TryConvert::try_convert(args[0])?;
-        let locale_ref = locale.inner.borrow();
-        let locale_str = locale_ref.to_string();
-        let icu_locale = locale_ref.clone();
-        drop(locale_ref);
+        let (icu_locale, locale_str) = helpers::extract_locale(ruby, args)?;
 
         // Get kwargs (optional)
         let kwargs: RHash = if args.len() > 1 {
