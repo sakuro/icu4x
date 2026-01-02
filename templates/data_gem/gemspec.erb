@@ -1,10 +1,8 @@
 # frozen_string_literal: true
 
-require_relative "lib/icu4x/version"
-
 Gem::Specification.new do |spec|
   spec.name = "icu4x-data-<%= variant %>"
-  spec.version = ICU4X::VERSION
+  spec.version = "<%= version %>"
   spec.authors = ["OZAWA Sakuro"]
   spec.email = ["10973+sakuro@users.noreply.github.com"]
 
@@ -17,7 +15,7 @@ Gem::Specification.new do |spec|
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["rubygems_mfa_required"] = "true"
 
-  spec.add_dependency "icu4x", "~> #{ICU4X::VERSION}"
+  spec.add_dependency "icu4x", "~> <%= version %>"
 
   spec.files = Dir["lib/**/*.rb", "data/*.postcard", "LICENSE.txt", "README.md"]
   spec.require_paths = ["lib"]

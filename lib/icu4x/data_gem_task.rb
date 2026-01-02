@@ -35,9 +35,6 @@ module ICU4X
     TEMPLATE_DIR = Pathname(__dir__).join("../../templates/data_gem")
     public_constant :TEMPLATE_DIR
 
-    VERSION_FILE = Pathname(__dir__).join("version.rb")
-    private_constant :VERSION_FILE
-
     def initialize
       super
       define_tasks
@@ -73,17 +70,14 @@ module ICU4X
       FileUtils.rm_rf(gem_dir)
       gem_dir.mkpath
 
-      # Copy version.rb for gemspec
-      lib_icu4x_dir = gem_dir / "lib" / "icu4x"
-      lib_icu4x_dir.mkpath
-      FileUtils.cp(VERSION_FILE, lib_icu4x_dir / "version.rb")
-
       # Render templates
+      require "icu4x/version"
       render_template(
         "gemspec.erb",
         gem_dir / "icu4x-data-#{variant}.gemspec",
         variant:,
-        config:
+        config:,
+        version: ICU4X::VERSION
       )
       render_template(
         "README.md.erb",
