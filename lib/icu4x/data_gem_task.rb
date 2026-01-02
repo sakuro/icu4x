@@ -17,11 +17,11 @@ module ICU4X
   #   ICU4X::DataGemTask.new
   #
   # This creates the following tasks:
-  # - +icu4x:data_gems:build+ - Build all data gems
-  # - +icu4x:data_gems:build:full+ - Build icu4x-data-full gem
-  # - +icu4x:data_gems:build:recommended+ - Build icu4x-data-recommended gem
-  # - +icu4x:data_gems:build:modern+ - Build icu4x-data-modern gem
-  # - +icu4x:data_gems:clean+ - Clean data gem build artifacts
+  # - `icu4x:data_gems:build` - Build all data gems
+  # - `icu4x:data_gems:build:full` - Build icu4x-data-full gem
+  # - `icu4x:data_gems:build:recommended` - Build icu4x-data-recommended gem
+  # - `icu4x:data_gems:build:modern` - Build icu4x-data-modern gem
+  # - `icu4x:data_gems:clean` - Clean data gem build artifacts
   class DataGemTask < ::Rake::TaskLib
     VARIANTS = {
       full: {locales: :full, description: "All CLDR locales (700+)"},

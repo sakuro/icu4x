@@ -27,7 +27,7 @@
 #
 #     # Returns the default data provider, lazily loaded from configuration.
 #     #
-#     # The provider is created from +config.data_path+ or the +ICU4X_DATA_PATH+
+#     # The provider is created from `config.data_path` or the `ICU4X_DATA_PATH`
 #     # environment variable. Once created, the provider is cached.
 #     #
 #     # @return [DataProvider, nil] the default provider, or nil if not configured
@@ -85,7 +85,7 @@
 #       # Creates a DataProvider from a binary blob file.
 #       #
 #       # @param path [Pathname] path to the .postcard blob file
-#       # @param priority [Symbol] collation fallback priority, either +:language+ or +:region+
+#       # @param priority [Symbol] collation fallback priority, either `:language` or `:region`
 #       # @return [DataProvider] a new data provider instance
 #       # @raise [DataError] if the file cannot be read or is invalid
 #       #
@@ -112,21 +112,21 @@
 #     class DataGenerator
 #       # Exports locale data to a file.
 #       #
-#       # The +locales+ parameter accepts either a Symbol for predefined locale sets
+#       # The `locales` parameter accepts either a Symbol for predefined locale sets
 #       # based on CLDR coverage levels, or an Array of locale identifier strings.
-#       # When using +with_descendants+, ancestor locales (including +und+) are
+#       # When using `with_descendants`, ancestor locales (including `und`) are
 #       # automatically included for fallback support.
 #       #
 #       # @param locales [Symbol, Array<String>] locale specification:
-#       #   - +:full+ - all CLDR locales (700+)
-#       #   - +:recommended+ - locales with basic, moderate, or modern coverage (164)
-#       #   - +:modern+ - locales with modern coverage only (103)
-#       #   - +:moderate+ - locales with moderate coverage only
-#       #   - +:basic+ - locales with basic coverage only
-#       #   - +Array<String>+ - explicit list of locale identifiers
+#       #   - `:full` - all CLDR locales (700+)
+#       #   - `:recommended` - locales with basic, moderate, or modern coverage (164)
+#       #   - `:modern` - locales with modern coverage only (103)
+#       #   - `:moderate` - locales with moderate coverage only
+#       #   - `:basic` - locales with basic coverage only
+#       #   - `Array<String>` - explicit list of locale identifiers
 #       # @param markers [Symbol, Array<String>] data markers to include;
-#       #   use +:all+ for all markers, or specify individual marker names
-#       # @param format [Symbol] output format, currently only +:blob+ is supported
+#       #   use `:all` for all markers, or specify individual marker names
+#       # @param format [Symbol] output format, currently only `:blob` is supported
 #       # @param output [Pathname] path to write the output file
 #       # @return [void]
 #       # @raise [DataGeneratorError] if export fails
@@ -233,9 +233,9 @@
 #       # Returns the locale extensions.
 #       #
 #       # @return [Hash] a hash containing extension data with keys:
-#       #   - +:unicode+ [Hash<String, String>] Unicode extension key-value pairs
-#       #   - +:transform+ [String, nil] Transform extension string
-#       #   - +:private+ [Array<String>] Private use extensions
+#       #   - `:unicode` [Hash<String, String>] Unicode extension key-value pairs
+#       #   - `:transform` [String, nil] Transform extension string
+#       #   - `:private` [Array<String>] Private use extensions
 #       #
 #       # @example
 #       #   locale = ICU4X::Locale.parse("ja-JP-u-ca-japanese")
@@ -299,7 +299,7 @@
 #       #
 #       # @param locale [Locale] the locale for plural rules
 #       # @param provider [DataProvider, nil] data provider (uses default if nil)
-#       # @param type [Symbol] plural rule type, either +:cardinal+ or +:ordinal+
+#       # @param type [Symbol] plural rule type, either `:cardinal` or `:ordinal`
 #       # @return [PluralRules] a new instance
 #       # @raise [DataError] if data for the locale is unavailable
 #       #
@@ -312,7 +312,7 @@
 #       # Selects the plural category for a number.
 #       #
 #       # @param number [Integer, Float] the number to categorize
-#       # @return [Symbol] one of +:zero+, +:one+, +:two+, +:few+, +:many+, or +:other+
+#       # @return [Symbol] one of `:zero`, `:one`, `:two`, `:few`, `:many`, or `:other`
 #       #
 #       # @example
 #       #   rules.select(0)    #=> :other (in English)
@@ -334,8 +334,8 @@
 #       # Returns the resolved options for this instance.
 #       #
 #       # @return [Hash] options hash with keys:
-#       #   - +:locale+ [String] the resolved locale identifier
-#       #   - +:type+ [Symbol] the plural rule type (+:cardinal+ or +:ordinal+)
+#       #   - `:locale` [String] the resolved locale identifier
+#       #   - `:type` [Symbol] the plural rule type (`:cardinal` or `:ordinal`)
 #       #
 #       def resolved_options; end
 #     end
@@ -362,8 +362,8 @@
 #       #
 #       # @param locale [Locale] the locale for formatting
 #       # @param provider [DataProvider, nil] data provider (uses default if nil)
-#       # @param style [Symbol] format style: +:decimal+, +:percent+, or +:currency+
-#       # @param currency [String, nil] ISO 4217 currency code (required for +:currency+ style)
+#       # @param style [Symbol] format style: `:decimal`, `:percent`, or `:currency`
+#       # @param currency [String, nil] ISO 4217 currency code (required for `:currency` style)
 #       # @param use_grouping [Boolean] whether to use grouping separators
 #       # @param minimum_integer_digits [Integer, nil] minimum number of integer digits
 #       # @param minimum_fraction_digits [Integer, nil] minimum number of fraction digits
@@ -393,14 +393,14 @@
 #       # Returns the resolved options for this instance.
 #       #
 #       # @return [Hash] options hash with keys:
-#       #   - +:locale+ [String] the resolved locale identifier
-#       #   - +:style+ [Symbol] the format style
-#       #   - +:use_grouping+ [Boolean] whether grouping is enabled
-#       #   - +:currency+ [String] currency code (if applicable)
-#       #   - +:minimum_integer_digits+ [Integer] minimum integer digits
-#       #   - +:minimum_fraction_digits+ [Integer] minimum fraction digits
-#       #   - +:maximum_fraction_digits+ [Integer] maximum fraction digits
-#       #   - +:rounding_mode+ [Symbol] the rounding mode
+#       #   - `:locale` [String] the resolved locale identifier
+#       #   - `:style` [Symbol] the format style
+#       #   - `:use_grouping` [Boolean] whether grouping is enabled
+#       #   - `:currency` [String] currency code (if applicable)
+#       #   - `:minimum_integer_digits` [Integer] minimum integer digits
+#       #   - `:minimum_fraction_digits` [Integer] minimum fraction digits
+#       #   - `:maximum_fraction_digits` [Integer] maximum fraction digits
+#       #   - `:rounding_mode` [Symbol] the rounding mode
 #       #
 #       def resolved_options; end
 #     end
@@ -426,8 +426,8 @@
 #       #
 #       # @param locale [Locale] the locale for formatting
 #       # @param provider [DataProvider, nil] data provider (uses default if nil)
-#       # @param date_style [Symbol, nil] date format style: +:full+, +:long+, +:medium+, or +:short+
-#       # @param time_style [Symbol, nil] time format style: +:full+, +:long+, +:medium+, or +:short+
+#       # @param date_style [Symbol, nil] date format style: `:full`, `:long`, `:medium`, or `:short`
+#       # @param time_style [Symbol, nil] time format style: `:full`, `:long`, `:medium`, or `:short`
 #       # @param time_zone [String, nil] IANA time zone identifier (e.g., "America/New_York")
 #       # @param calendar [Symbol] calendar system to use
 #       # @return [DateTimeFormat] a new instance
@@ -449,11 +449,11 @@
 #       # Returns the resolved options for this instance.
 #       #
 #       # @return [Hash] options hash with keys:
-#       #   - +:locale+ [String] the resolved locale identifier
-#       #   - +:calendar+ [Symbol] the calendar system
-#       #   - +:date_style+ [Symbol] the date style (if set)
-#       #   - +:time_style+ [Symbol] the time style (if set)
-#       #   - +:time_zone+ [String] the time zone (if set)
+#       #   - `:locale` [String] the resolved locale identifier
+#       #   - `:calendar` [Symbol] the calendar system
+#       #   - `:date_style` [Symbol] the date style (if set)
+#       #   - `:time_style` [Symbol] the time style (if set)
+#       #   - `:time_zone` [String] the time zone (if set)
 #       #
 #       def resolved_options; end
 #     end
@@ -475,8 +475,8 @@
 #       #
 #       # @param locale [Locale] the locale for formatting
 #       # @param provider [DataProvider, nil] data provider (uses default if nil)
-#       # @param style [Symbol] format style: +:long+, +:short+, or +:narrow+
-#       # @param numeric [Symbol] numeric display: +:always+ or +:auto+
+#       # @param style [Symbol] format style: `:long`, `:short`, or `:narrow`
+#       # @param numeric [Symbol] numeric display: `:always` or `:auto`
 #       # @return [RelativeTimeFormat] a new instance
 #       # @raise [DataError] if data for the locale is unavailable
 #       #
@@ -485,8 +485,8 @@
 #       # Formats a relative time value.
 #       #
 #       # @param value [Integer] the relative time value (negative for past, positive for future)
-#       # @param unit [Symbol] time unit: +:second+, +:minute+, +:hour+, +:day+,
-#       #   +:week+, +:month+, +:quarter+, or +:year+
+#       # @param unit [Symbol] time unit: `:second`, `:minute`, `:hour`, `:day`,
+#       #   `:week`, `:month`, `:quarter`, or `:year`
 #       # @return [String] the formatted relative time string
 #       #
 #       # @example
@@ -498,9 +498,9 @@
 #       # Returns the resolved options for this instance.
 #       #
 #       # @return [Hash] options hash with keys:
-#       #   - +:locale+ [String] the resolved locale identifier
-#       #   - +:style+ [Symbol] the format style
-#       #   - +:numeric+ [Symbol] the numeric display mode
+#       #   - `:locale` [String] the resolved locale identifier
+#       #   - `:style` [Symbol] the format style
+#       #   - `:numeric` [Symbol] the numeric display mode
 #       #
 #       def resolved_options; end
 #     end
@@ -524,8 +524,8 @@
 #       #
 #       # @param locale [Locale] the locale for formatting
 #       # @param provider [DataProvider, nil] data provider (uses default if nil)
-#       # @param type [Symbol] list type: +:conjunction+, +:disjunction+, or +:unit+
-#       # @param style [Symbol] format style: +:long+, +:short+, or +:narrow+
+#       # @param type [Symbol] list type: `:conjunction`, `:disjunction`, or `:unit`
+#       # @param style [Symbol] format style: `:long`, `:short`, or `:narrow`
 #       # @return [ListFormat] a new instance
 #       # @raise [DataError] if data for the locale is unavailable
 #       #
@@ -541,9 +541,9 @@
 #       # Returns the resolved options for this instance.
 #       #
 #       # @return [Hash] options hash with keys:
-#       #   - +:locale+ [String] the resolved locale identifier
-#       #   - +:type+ [Symbol] the list type
-#       #   - +:style+ [Symbol] the format style
+#       #   - `:locale` [String] the resolved locale identifier
+#       #   - `:type` [Symbol] the list type
+#       #   - `:style` [Symbol] the format style
 #       #
 #       def resolved_options; end
 #     end
@@ -572,9 +572,9 @@
 #       # @param locale [Locale] the locale for collation rules
 #       # @param provider [DataProvider, nil] data provider (uses default if nil)
 #       # @param sensitivity [Symbol] comparison sensitivity:
-#       #   +:base+, +:accent+, +:case+, or +:variant+
+#       #   `:base`, `:accent`, `:case`, or `:variant`
 #       # @param numeric [Boolean] whether to compare numeric strings as numbers
-#       # @param case_first [Symbol, nil] which case to sort first: +:upper+ or +:lower+
+#       # @param case_first [Symbol, nil] which case to sort first: `:upper` or `:lower`
 #       # @return [Collator] a new instance
 #       # @raise [DataError] if data for the locale is unavailable
 #       #
@@ -592,10 +592,10 @@
 #       # Returns the resolved options for this instance.
 #       #
 #       # @return [Hash] options hash with keys:
-#       #   - +:locale+ [String] the resolved locale identifier
-#       #   - +:sensitivity+ [Symbol] the comparison sensitivity
-#       #   - +:numeric+ [Boolean] whether numeric sorting is enabled
-#       #   - +:case_first+ [Symbol] which case sorts first (if set)
+#       #   - `:locale` [String] the resolved locale identifier
+#       #   - `:sensitivity` [Symbol] the comparison sensitivity
+#       #   - `:numeric` [Boolean] whether numeric sorting is enabled
+#       #   - `:case_first` [Symbol] which case sorts first (if set)
 #       #
 #       def resolved_options; end
 #     end
@@ -617,9 +617,9 @@
 #       #
 #       # @param locale [Locale] the locale for display names
 #       # @param provider [DataProvider, nil] data provider (uses default if nil)
-#       # @param type [Symbol] display name type: +:language+, +:region+, +:script+, or +:locale+
-#       # @param style [Symbol] display style: +:long+, +:short+, or +:narrow+
-#       # @param fallback [Symbol] fallback behavior: +:code+ or +:none+
+#       # @param type [Symbol] display name type: `:language`, `:region`, `:script`, or `:locale`
+#       # @param style [Symbol] display style: `:long`, `:short`, or `:narrow`
+#       # @param fallback [Symbol] fallback behavior: `:code` or `:none`
 #       # @return [DisplayNames] a new instance
 #       # @raise [DataError] if data for the locale is unavailable
 #       #
@@ -629,7 +629,7 @@
 #       #
 #       # @param code [String] the code to look up (language, region, script, or locale)
 #       # @return [String, nil] the localized display name, or nil if not found
-#       #   (when fallback is +:none+)
+#       #   (when fallback is `:none`)
 #       #
 #       # @example
 #       #   names.of("ja")  #=> "Japanese"
@@ -641,10 +641,10 @@
 #       # Returns the resolved options for this instance.
 #       #
 #       # @return [Hash] options hash with keys:
-#       #   - +:locale+ [String] the resolved locale identifier
-#       #   - +:type+ [Symbol] the display name type
-#       #   - +:style+ [Symbol] the display style
-#       #   - +:fallback+ [Symbol] the fallback behavior
+#       #   - `:locale` [String] the resolved locale identifier
+#       #   - `:type` [Symbol] the display name type
+#       #   - `:style` [Symbol] the display style
+#       #   - `:fallback` [Symbol] the fallback behavior
 #       #
 #       def resolved_options; end
 #     end
@@ -687,7 +687,7 @@
 #       # Creates a new Segmenter instance.
 #       #
 #       # @param granularity [Symbol] segmentation granularity:
-#       #   +:grapheme+, +:word+, +:sentence+, or +:line+
+#       #   `:grapheme`, `:word`, `:sentence`, or `:line`
 #       # @param provider [DataProvider, nil] data provider (uses default if nil)
 #       # @return [Segmenter] a new instance
 #       # @raise [DataError] if data is unavailable
@@ -714,7 +714,7 @@
 #       # Returns the resolved options for this instance.
 #       #
 #       # @return [Hash] options hash with keys:
-#       #   - +:granularity+ [Symbol] the segmentation granularity
+#       #   - `:granularity` [Symbol] the segmentation granularity
 #       #
 #       def resolved_options; end
 #     end
