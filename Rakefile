@@ -30,13 +30,17 @@ unless ENV["RUBY_TARGET"]
   require "rspec/core/rake_task"
   RSpec::Core::RakeTask.new(:spec)
 
+  require "icu4x/data_gem_task"
   require "icu4x/rake_task"
+
   TEST_BLOB = "spec/fixtures/test-data.postcard"
 
   ICU4X::RakeTask.new do |t|
     t.locales = %w[en ja ru ar de]
     t.output = TEST_BLOB
   end
+
+  ICU4X::DataGemTask.new
 
   Rake::Task[TEST_BLOB].enhance([:compile])
   Rake::Task[:spec].enhance([TEST_BLOB])
