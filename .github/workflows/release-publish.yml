@@ -94,6 +94,12 @@ jobs:
         ruby-version: "3.2"
         bundler-cache: true
 
+    - name: Compile native extension
+      run: bundle exec rake compile
+
+    - name: Build data gems
+      run: bundle exec rake icu4x:data_gems:build
+
     - name: Build source gem
       run: bundle exec rake build
 

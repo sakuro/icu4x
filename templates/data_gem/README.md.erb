@@ -1,0 +1,39 @@
+# icu4x-data-<%= variant %>
+
+Pre-generated ICU4X locale data (<%= config[:description].downcase %>).
+
+## Installation
+
+Add to your Gemfile:
+
+```ruby
+gem "icu4x"
+gem "icu4x-data-<%= variant %>"
+```
+
+## Usage
+
+```ruby
+require "icu4x"
+require "icu4x/data/<%= variant %>"
+
+# The default provider is now automatically configured.
+locale = ICU4X::Locale.parse("ja-JP")
+formatter = ICU4X::DateTimeFormat.new(locale, date_style: :long)
+formatter.format(Time.now)  #=> "2026年1月1日"
+```
+
+## Locale Coverage
+
+This gem includes locales with <%= variant %> CLDR coverage.
+
+For more information about CLDR coverage levels, see:
+https://cldr.unicode.org/index/cldr-spec/coverage-levels
+
+## License
+
+This gem is available under the MIT License.
+
+The locale data is derived from the Unicode Common Locale Data Repository (CLDR)
+and is available under the Unicode License v3.
+See https://www.unicode.org/license.txt for details.

@@ -1,0 +1,8 @@
+# frozen_string_literal: true
+
+require "icu4x"
+require "pathname"
+
+ICU4X.configure do |config|
+  config.data_path = Pathname(__dir__).join("../../../data/<%= variant %>.postcard")
+end
