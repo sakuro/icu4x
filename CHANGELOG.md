@@ -2,6 +2,12 @@
 
 ## [0.6.2] - 2026-01-02
 
+### Fixed
+
+- Fix incorrect `Segment#text` → `#segment` in README example
+- Improve README Setup section (mention prebuilt binary gems, add Data Preparation heading)
+- Replace YARD `+...+` syntax with markdown backticks for consistency
+
 ## [0.6.1] - 2026-01-02
 
 ### Changed
