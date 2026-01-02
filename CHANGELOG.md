@@ -2,6 +2,14 @@
 
 ## [0.6.0] - 2026-01-02
 
+### Added
+
+- **Companion data gems**: `icu4x-data-full`, `icu4x-data-recommended`, `icu4x-data-modern` for bundled locale data
+  - Auto-configures default provider on require (e.g., `require "icu4x/data/recommended"`)
+- **RakeTask**: `ICU4X::RakeTask` for integrating data generation into build workflows
+- **Symbolic locale specifiers**: `DataGenerator.export` accepts `:full`, `:recommended`, `:modern`, `:moderate`, `:basic` symbols
+- **Automatic 'und' locale**: `DataGenerator.export` automatically includes the `und` (undetermined) locale for fallback
+
 ## [0.5.2] - 2026-01-01
 
 ### Fixed
