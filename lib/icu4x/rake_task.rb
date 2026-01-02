@@ -24,11 +24,11 @@ module ICU4X
     attr_reader :name
 
     # @return [Symbol, Array<String>] Locale specifier or array of locale strings
-    #   Defaults to +:recommended+
+    #   Defaults to `:recommended`
     attr_accessor :locales
 
     # @return [Symbol, Array<String>] Data markers to include
-    #   Defaults to +:all+
+    #   Defaults to `:all`
     attr_accessor :markers
 
     # @return [Pathname, String] Output path relative to Rakefile
