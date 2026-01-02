@@ -17,7 +17,6 @@ RSpec.describe ICU4X::DataGemTask do
       expect(Rake::Task.task_defined?("icu4x:data_gems:build:full")).to be true
       expect(Rake::Task.task_defined?("icu4x:data_gems:build:recommended")).to be true
       expect(Rake::Task.task_defined?("icu4x:data_gems:build:modern")).to be true
-      expect(Rake::Task.task_defined?("icu4x:data_gems:build:basic")).to be true
     end
 
     it "creates clean task" do
@@ -28,8 +27,8 @@ RSpec.describe ICU4X::DataGemTask do
   end
 
   describe "VARIANTS" do
-    it "defines all four variants" do
-      expect(ICU4X::DataGemTask::VARIANTS.keys).to contain_exactly(:full, :recommended, :modern, :basic)
+    it "defines all three variants" do
+      expect(ICU4X::DataGemTask::VARIANTS.keys).to contain_exactly(:full, :recommended, :modern)
     end
 
     it "has locales and description for each variant" do
@@ -56,40 +55,40 @@ RSpec.describe ICU4X::DataGemTask do
 
   describe "build task", :slow do
     let(:pkg_dir) { Pathname("pkg") }
-    let(:tmp_dir) { Pathname("tmp/icu4x-data-basic") }
+    let(:tmp_dir) { Pathname("tmp/icu4x-data-modern") }
 
     before do
       # Define a dummy compile task since native extension is already loaded
       Rake::Task.define_task(:compile)
       ICU4X::DataGemTask.new
       FileUtils.rm_rf(tmp_dir)
-      FileUtils.rm_f(pkg_dir / "icu4x-data-basic-#{ICU4X::VERSION}.gem")
+      FileUtils.rm_f(pkg_dir / "icu4x-data-modern-#{ICU4X::VERSION}.gem")
     end
 
     after do
       FileUtils.rm_rf(tmp_dir)
-      FileUtils.rm_f(pkg_dir / "icu4x-data-basic-#{ICU4X::VERSION}.gem")
+      FileUtils.rm_f(pkg_dir / "icu4x-data-modern-#{ICU4X::VERSION}.gem")
     end
 
     it "generates gem file in pkg directory" do
-      Rake::Task["icu4x:data_gems:build:basic"].invoke
+      Rake::Task["icu4x:data_gems:build:modern"].invoke
 
-      gem_file = pkg_dir / "icu4x-data-basic-#{ICU4X::VERSION}.gem"
+      gem_file = pkg_dir / "icu4x-data-modern-#{ICU4X::VERSION}.gem"
       expect(gem_file).to exist
     end
 
     it "includes required files in gem" do
-      Rake::Task["icu4x:data_gems:build:basic"].invoke
+      Rake::Task["icu4x:data_gems:build:modern"].invoke
 
-      gem_file = pkg_dir / "icu4x-data-basic-#{ICU4X::VERSION}.gem"
+      gem_file = pkg_dir / "icu4x-data-modern-#{ICU4X::VERSION}.gem"
       output = %x(gem spec #{gem_file} files)
       gem_contents = output.lines.filter_map {|l|
         stripped = l.strip.delete_prefix("- ")
         stripped unless stripped.empty?
       }
 
-      expect(gem_contents).to include("lib/icu4x/data/basic.rb")
-      expect(gem_contents).to include("data/basic.postcard")
+      expect(gem_contents).to include("lib/icu4x/data/modern.rb")
+      expect(gem_contents).to include("data/modern.postcard")
       expect(gem_contents).to include("LICENSE.txt")
       expect(gem_contents).to include("README.md")
     end

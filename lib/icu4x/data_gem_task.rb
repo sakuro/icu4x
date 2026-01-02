@@ -21,14 +21,12 @@ module ICU4X
   # - +icu4x:data_gems:build:full+ - Build icu4x-data-full gem
   # - +icu4x:data_gems:build:recommended+ - Build icu4x-data-recommended gem
   # - +icu4x:data_gems:build:modern+ - Build icu4x-data-modern gem
-  # - +icu4x:data_gems:build:basic+ - Build icu4x-data-basic gem
   # - +icu4x:data_gems:clean+ - Clean data gem build artifacts
   class DataGemTask < ::Rake::TaskLib
     VARIANTS = {
       full: {locales: :full, description: "All CLDR locales (700+)"},
       recommended: {locales: :recommended, description: "Recommended locales (164)"},
-      modern: {locales: :modern, description: "Modern coverage locales (103)"},
-      basic: {locales: :basic, description: "Basic coverage locales (66)"}
+      modern: {locales: :modern, description: "Modern coverage locales (103)"}
     }.freeze
     public_constant :VARIANTS
 
