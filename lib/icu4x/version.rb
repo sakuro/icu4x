@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
 module ICU4X
-  VERSION = "0.5.2"
+  VERSION = "0.6.0"
   public_constant :VERSION
 end
