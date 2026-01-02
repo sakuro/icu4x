@@ -25,7 +25,7 @@ No locale data is bundled with the gem. Users generate only the data they need, 
 ## Requirements
 
 - Ruby 3.2+
-- Rust toolchain (for building the native extension)
+- Rust toolchain (only required when building from source; prebuilt binary gems are available for major platforms)
 
 ## Setup
 
@@ -35,7 +35,11 @@ Add to your Gemfile:
 gem "icu4x"
 ```
 
-### Option 1: Use Pre-built Data Gem (Quick Start)
+Prebuilt binary gems are available for x86_64-linux, aarch64-linux, x86_64-darwin, arm64-darwin, and x64-mingw-ucrt. On these platforms, no Rust toolchain is required.
+
+### Data Preparation
+
+#### Option 1: Use Pre-built Data Gem (Quick Start)
 
 Add a companion data gem for instant setup:
 
@@ -54,7 +58,7 @@ Available data gems:
 - `icu4x-data-recommended` - Recommended locales (164)
 - `icu4x-data-modern` - Modern coverage locales (103)
 
-### Option 2: Generate Custom Data
+#### Option 2: Generate Custom Data
 
 For fine-grained control, generate only the locales you need:
 
