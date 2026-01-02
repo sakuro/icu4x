@@ -19,6 +19,9 @@ jobs:
       pull-requests: write
       issues: write
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -31,6 +34,9 @@ jobs:
       contents: read
       pull-requests: write
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -41,4 +47,4 @@ jobs:
             - Rust FFI safety
             - Test coverage
             - Documentation completeness
-          claude_args: "--max-turns 3"
+          claude_args: "--max-turns 5"
