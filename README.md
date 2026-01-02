@@ -124,7 +124,7 @@ dn.of("en")
 
 # Text segmentation
 segmenter = ICU4X::Segmenter.new(granularity: :word, provider:)
-segmenter.segment("Hello, world!").map(&:text)
+segmenter.segment("Hello, world!").map(&:segment)
 # => ["Hello", ",", " ", "world", "!"]
 ```
 
