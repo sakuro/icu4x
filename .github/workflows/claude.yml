@@ -47,4 +47,5 @@ jobs:
             - Rust FFI safety
             - Test coverage
             - Documentation completeness
-          claude_args: "--max-turns 5"
+          claude_args: "--max-turns 10"
+          show_full_output: true
