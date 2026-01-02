@@ -2,6 +2,10 @@
 
 ## [0.6.1] - 2026-01-02
 
+### Changed
+
+- Re-release to publish companion data gems with Trusted Publisher configuration
+
 ## [0.6.0] - 2026-01-02
 
 ### Added
