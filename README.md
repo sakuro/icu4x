@@ -35,7 +35,28 @@ Add to your Gemfile:
 gem "icu4x"
 ```
 
-Then generate locale data for your application:
+### Option 1: Use Pre-built Data Gem (Quick Start)
+
+Add a companion data gem for instant setup:
+
+```ruby
+gem "icu4x"
+gem "icu4x-data-recommended"  # 164 locales, ~24MB
+```
+
+```ruby
+require "icu4x"
+require "icu4x/data/recommended"  # Auto-configures default provider
+```
+
+Available data gems:
+- `icu4x-data-full` - All CLDR locales (700+)
+- `icu4x-data-recommended` - Recommended locales (164)
+- `icu4x-data-modern` - Modern coverage locales (103)
+
+### Option 2: Generate Custom Data
+
+For fine-grained control, generate only the locales you need:
 
 ```ruby
 require "icu4x"

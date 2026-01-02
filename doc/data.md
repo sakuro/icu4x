@@ -45,6 +45,47 @@ Data supplied by DataProvider is derived from **CLDR (Common Locale Data Reposit
 
 ---
 
+## Companion Data Gems
+
+For convenience, pre-generated data gems are available as an alternative to self-generation:
+
+| Gem | Locales | Description |
+|-----|---------|-------------|
+| `icu4x-data-full` | 700+ | All CLDR locales |
+| `icu4x-data-recommended` | 164 | Recommended locales (basic + moderate + modern coverage) |
+| `icu4x-data-modern` | 103 | Modern coverage locales |
+
+### Usage
+
+```ruby
+# Gemfile
+gem "icu4x"
+gem "icu4x-data-recommended"
+```
+
+```ruby
+require "icu4x"
+require "icu4x/data/recommended"  # Auto-configures default provider
+
+locale = ICU4X::Locale.parse("ja-JP")
+dtf = ICU4X::DateTimeFormat.new(locale, date_style: :long)
+dtf.format(Time.now)  # => "2025年12月28日"
+```
+
+### How It Works
+
+When you require a data gem (e.g., `icu4x/data/recommended`), it automatically calls `ICU4X.configure` to set the `data_path` to the bundled blob file. No manual configuration is needed.
+
+### Choosing a Data Gem
+
+- **`icu4x-data-full`**: Use when you need support for all possible locales
+- **`icu4x-data-recommended`**: Good default choice for most applications
+- **`icu4x-data-modern`**: Smaller footprint when you only need major languages
+
+For fine-grained control over included locales, generate your own data using `ICU4X::DataGenerator`.
+
+---
+
 ## ICU4X::DataProvider
 
 A class that provides locale data to formatters.
