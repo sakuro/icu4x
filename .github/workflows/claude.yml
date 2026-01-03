@@ -42,4 +42,5 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: "/review"
+          allowed_tools: "Bash(gh:*),Read,Glob,Grep"
           show_full_output: true
