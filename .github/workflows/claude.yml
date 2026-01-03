@@ -62,7 +62,7 @@ jobs:
             2. Review ONLY the lines shown in the diff
             3. Post feedback with `gh pr comment`
             IMPORTANT: Do NOT use Read, Glob, or Grep tools. Do NOT explore the codebase.
-          claude_args: '--allowedTools "Bash(gh pr comment:*)" "Bash(gh pr diff:*)" "Bash(gh pr view:*)"'
+          claude_args: '--max-turns 15 --allowedTools "Bash(gh pr comment:*)" "Bash(gh pr diff:*)" "Bash(gh pr view:*)"'
       - name: Remove review label
         if: github.event.action == 'labeled'
         run: gh pr edit ${{ github.event.pull_request.number }} --remove-label claude-review
