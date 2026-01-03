@@ -57,28 +57,9 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
-            You are reviewing a pull request. Follow these exact steps:
-
-            STEP 1: Run this command to get the PR diff:
-            gh pr diff
-
-            STEP 2: Analyze ONLY the lines shown in the diff output. Do not read any other files.
-
-            STEP 3: Write a concise code review covering:
-            - Code quality issues in the changed lines
-            - Potential bugs or security issues
-            - Style suggestions (if applicable)
-
-            STEP 4: Post your review as a comment using:
-            gh pr comment --body "YOUR_REVIEW_HERE"
-
-            RULES:
-            - Only review code shown in the diff
-            - Do not explore the codebase
-            - Do not use Read, Glob, or Grep tools
-            - Do not run git commands
-            - Complete all 4 steps in order
-          claude_args: '--allowedTools "Bash(gh pr comment:*)" "Bash(gh pr diff:*)"'
+            Review this pull request. Focus ONLY on the files and changes shown in the PR diff.
+            Do not review or comment on other parts of the codebase.
+            Keep your review concise and actionable.
       - name: Remove review label
         if: github.event.action == 'labeled'
         run: gh pr edit ${{ github.event.pull_request.number }} --remove-label claude-review
