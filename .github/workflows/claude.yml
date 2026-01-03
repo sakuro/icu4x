@@ -57,9 +57,10 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
-            Review this pull request. Focus ONLY on the files and changes shown in the PR diff.
-            Do not review or comment on other parts of the codebase.
-            Keep your review concise and actionable.
+            Review this PR. Analyze ONLY the changes visible in the PR diff.
+            Do NOT review or comment on existing code that wasn't changed.
+            Focus on code quality, potential bugs, and actionable suggestions.
+            Use `gh pr comment` to post your review feedback.
       - name: Remove review label
         if: github.event.action == 'labeled'
         run: gh pr edit ${{ github.event.pull_request.number }} --remove-label claude-review
