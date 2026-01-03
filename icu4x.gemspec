@@ -8,8 +8,12 @@ Gem::Specification.new do |spec|
   spec.authors = ["OZAWA Sakuro"]
   spec.email = ["10973+sakuro@users.noreply.github.com"]
 
-  spec.summary = "icu4x"
-  spec.description = "icu4x"
+  spec.summary = "Ruby bindings for ICU4X Unicode internationalization library"
+  spec.description = <<~DESC.chomp
+    ICU4X provides Ruby bindings for the ICU4X library, offering Unicode
+    internationalization support including locale handling, number formatting,
+    date/time formatting, collation, segmentation, and more.
+  DESC
   spec.homepage = "https://github.com/sakuro/icu4x"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.2"
