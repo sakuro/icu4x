@@ -42,6 +42,5 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: "/review"
-          mode: agent
-          allowed_tools: "Bash(gh pr:*),Bash(gh api:*),Bash(git diff:*),Bash(git log:*),Read,Glob,Grep"
+          claude_args: '--allowedTools "Bash(gh pr:*)" "Bash(gh api:*)" "Bash(git diff:*)" "Bash(git log:*)" "Read" "Glob" "Grep"'
           show_full_output: true
