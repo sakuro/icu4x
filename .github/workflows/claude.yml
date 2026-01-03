@@ -2,7 +2,7 @@
 #
 # This workflow provides AI-assisted development capabilities:
 # - Interactive: Responds to @claude mentions in issues and PR comments
-# - Review: Automatically reviews new pull requests
+# - Review: Automatically reviews new pull requests, or on-demand via label
 
 name: Claude Code
 
@@ -12,7 +12,7 @@ on:
   pull_request_review_comment:
     types: [created]
   pull_request:
-    types: [opened]
+    types: [opened, labeled]
 
 jobs:
   claude-interactive:
@@ -37,7 +37,10 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
   claude-review:
-    if: github.event_name == 'pull_request'
+    if: |
+      github.event_name == 'pull_request' &&
+      (github.event.action == 'opened' ||
+       (github.event.action == 'labeled' && github.event.label.name == 'claude-review'))
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -57,3 +60,8 @@ jobs:
             Review this PR. Analyze the changes for code quality, potential bugs, and adherence to project conventions.
             Use `gh pr comment` to post your review feedback. Focus on actionable suggestions.
           claude_args: '--allowedTools "Bash(gh pr comment:*)" "Bash(gh pr diff:*)" "Bash(gh pr view:*)" "Bash(git diff:*)" "Read" "Glob" "Grep"'
+      - name: Remove review label
+        if: github.event.action == 'labeled'
+        run: gh pr edit ${{ github.event.pull_request.number }} --remove-label claude-review
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
