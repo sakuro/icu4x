@@ -41,11 +41,5 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          prompt: |
-            Review this PR focusing on:
-            - Ruby code style and conventions
-            - Rust FFI safety
-            - Test coverage
-            - Documentation completeness
-          claude_args: "--max-turns 10"
+          prompt: "/review"
           show_full_output: true
