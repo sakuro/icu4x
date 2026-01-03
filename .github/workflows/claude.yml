@@ -57,8 +57,12 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
-            Review this PR. Analyze the changes for code quality, potential bugs, and adherence to project conventions.
-            Use `gh pr comment` to post your review feedback. Focus on actionable suggestions.
+            Review ONLY the changes in this PR, not the entire codebase.
+            First run `gh pr diff` to see the exact changes, then analyze them for:
+            - Code quality and potential bugs
+            - Adherence to project conventions (see CLAUDE.md)
+            Do NOT explore or review files outside the diff.
+            Use `gh pr comment` to post a concise review focused on the PR changes.
           claude_args: '--allowedTools "Bash(gh pr comment:*)" "Bash(gh pr diff:*)" "Bash(gh pr view:*)" "Bash(git diff:*)" "Read" "Glob" "Grep"'
       - name: Remove review label
         if: github.event.action == 'labeled'
