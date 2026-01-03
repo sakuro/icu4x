@@ -2,6 +2,7 @@
 
 require "icu4x/data_gem_task"
 require "pathname"
+require "rubygems/user_interaction"
 require "tmpdir"
 
 RSpec.describe ICU4X::DataGemTask do
@@ -56,6 +57,14 @@ RSpec.describe ICU4X::DataGemTask do
   describe "build task", :slow do
     let(:pkg_dir) { Pathname("pkg") }
     let(:tmp_dir) { Pathname("tmp/icu4x-data-modern") }
+
+    around do |example|
+      old_ui = Gem::DefaultUserInteraction.ui
+      Gem::DefaultUserInteraction.ui = Gem::SilentUI.new
+      example.run
+    ensure
+      Gem::DefaultUserInteraction.ui = old_ui
+    end
 
     before do
       # Define a dummy compile task since native extension is already loaded
