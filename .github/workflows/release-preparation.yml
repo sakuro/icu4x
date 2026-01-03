@@ -44,14 +44,7 @@ jobs:
     - name: Generate CHANGELOG entries
       env:
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        TEMP_FILE: /tmp/changelog_entries_${{ github.run_id }}.txt
       run: |
-        # Validate API key is set
-        if [ -z "$ANTHROPIC_API_KEY" ]; then
-          echo "::error::ANTHROPIC_API_KEY secret is not set"
-          exit 1
-        fi
-
         # Get the last release tag
         LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
 
@@ -64,12 +57,12 @@ jobs:
           COMMITS=$(git log --format="- %s")
         fi
 
-        # Extract existing [Unreleased] section content (preserve structure, only trim leading/trailing blank lines)
+        # Extract existing [Unreleased] section content
         EXISTING_CHANGELOG=$(awk '
           /^## \[Unreleased\]/ { found=1; next }
           /^## \[/ && found { exit }
           found { print }
-        ' CHANGELOG.md | sed -e '/./,$!d' -e :a -e '/^\n*$/{$d;N;ba' -e '}')
+        ' CHANGELOG.md | sed '/^$/d')
 
         echo "Existing changelog entries:"
         echo "$EXISTING_CHANGELOG"
@@ -77,7 +70,7 @@ jobs:
         # Skip if no commits to analyze and no existing entries
         if [ -z "$COMMITS" ] && [ -z "$EXISTING_CHANGELOG" ]; then
           echo "No commits or existing entries to analyze"
-          echo "(no user-facing changes)" > "$TEMP_FILE"
+          echo "(no user-facing changes)" > /tmp/changelog_entries.txt
           exit 0
         fi
 
@@ -125,33 +118,27 @@ jobs:
         $COMMITS"
         fi
 
-        # Call Claude API (use jq -Rs for safe JSON escaping of prompt with special characters)
-        RESPONSE=$(echo "$FULL_PROMPT" | jq -Rs '{
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1024,
-          messages: [{
-            role: "user",
-            content: .
-          }]
-        }' | curl -s https://api.anthropic.com/v1/messages \
+        # Call Claude API
+        RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
           -H "Content-Type: application/json" \
           -H "x-api-key: $ANTHROPIC_API_KEY" \
           -H "anthropic-version: 2023-06-01" \
-          -d @-)
-
-        # Check for API errors
-        API_ERROR=$(echo "$RESPONSE" | jq -r '.error.message // empty')
-        if [ -n "$API_ERROR" ]; then
-          echo "::error::Claude API error: $API_ERROR"
-          echo "API Response: $RESPONSE"
-          exit 1
-        fi
+          -d "$(jq -n \
+            --arg prompt "$FULL_PROMPT" \
+            '{
+              model: "claude-sonnet-4-20250514",
+              max_tokens: 1024,
+              messages: [{
+                role: "user",
+                content: $prompt
+              }]
+            }')")
 
         # Extract the generated changelog entries
         CHANGELOG_ENTRIES=$(echo "$RESPONSE" | jq -r '.content[0].text // empty')
 
         if [ -z "$CHANGELOG_ENTRIES" ]; then
-          echo "::error::Failed to extract changelog entries from API response"
+          echo "Failed to generate changelog entries"
           echo "API Response: $RESPONSE"
           exit 1
         fi
@@ -160,11 +147,9 @@ jobs:
         echo "$CHANGELOG_ENTRIES"
 
         # Save entries for the next step
-        echo "$CHANGELOG_ENTRIES" > "$TEMP_FILE"
+        echo "$CHANGELOG_ENTRIES" > /tmp/changelog_entries.txt
 
     - name: Update CHANGELOG.md
-      env:
-        TEMP_FILE: /tmp/changelog_entries_${{ github.run_id }}.txt
       run: |
         # Get current date in UTC (GitHub Actions runs in UTC timezone)
         RELEASE_DATE=$(date -u +%Y-%m-%d)
@@ -172,9 +157,8 @@ jobs:
 
         # Read generated changelog entries
         CHANGELOG_ENTRIES=""
-        if [ -f "$TEMP_FILE" ]; then
-          CHANGELOG_ENTRIES=$(cat "$TEMP_FILE")
-          rm -f "$TEMP_FILE"
+        if [ -f /tmp/changelog_entries.txt ]; then
+          CHANGELOG_ENTRIES=$(cat /tmp/changelog_entries.txt)
         fi
 
         # Build the new release section
@@ -189,7 +173,6 @@ jobs:
         fi
 
         # Replace [Unreleased] section with new release section and add new [Unreleased]
-        # Handle both cases: [Unreleased] in middle of file and at end of file
         awk -v new_section="$NEW_SECTION" '
           /^## \[Unreleased\]/ {
             print "## [Unreleased]"
@@ -200,12 +183,10 @@ jobs:
           }
           /^## \[/ && skip {
             skip = 0
-            print
-            next
           }
           !skip { print }
-        ' CHANGELOG.md > /tmp/changelog_new_${{ github.run_id }}.md
-        mv /tmp/changelog_new_${{ github.run_id }}.md CHANGELOG.md
+        ' CHANGELOG.md > /tmp/changelog_new.md
+        mv /tmp/changelog_new.md CHANGELOG.md
 
     - name: Commit changes
       run: |
