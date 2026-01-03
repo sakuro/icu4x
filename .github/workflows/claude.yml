@@ -41,4 +41,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          prompt: "Review this PR and post your feedback."
+          prompt: |
+            Review this PR. Analyze the changes for code quality, potential bugs, and adherence to project conventions.
+            Use `gh pr comment` to post your review feedback. Focus on actionable suggestions.
+          claude_args: '--allowedTools "Bash(gh pr comment:*)" "Bash(gh pr diff:*)" "Bash(gh pr view:*)" "Bash(git diff:*)" "Read" "Glob" "Grep"'
