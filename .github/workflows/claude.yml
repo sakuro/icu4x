@@ -41,4 +41,4 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          direct_prompt: "Review this PR and post your review as a PR comment."
+          prompt: "Review this PR and post your feedback."
