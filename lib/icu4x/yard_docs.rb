@@ -441,7 +441,7 @@
 #
 #       # Formats a time value according to the configured options.
 #       #
-#       # @param time [Time] the time to format
+#       # @param time [Time, #to_time] the time to format (or any object responding to #to_time)
 #       # @return [String] the formatted date/time string
 #       #
 #       def format(time); end
