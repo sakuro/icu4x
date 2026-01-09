@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.7.0] - 2026-01-09
+
 ### Added
 
 - `DateTimeFormat#format` now accepts any object responding to `#to_time` (e.g., `Date`, `DateTime`)
