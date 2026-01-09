@@ -38,7 +38,18 @@ pub struct Segmenter {
     granularity: Granularity,
 }
 
-// SAFETY: Ruby's GVL protects access to this type.
+// SAFETY: This type is marked as Send to allow Ruby to move it between threads.
+//
+// Thread safety is guaranteed by Ruby's Global VM Lock (GVL):
+// - All Ruby method calls are serialized by the GVL
+// - Only one thread can execute Ruby code at a time
+// - The underlying ICU4X types are only accessed through Ruby method calls
+//
+// WARNING: This safety guarantee does NOT hold if:
+// - The GVL is released via `rb_thread_call_without_gvl`
+// - Using threading libraries that bypass the GVL
+//
+// In such cases, concurrent access to this type would be unsafe.
 unsafe impl Send for Segmenter {}
 
 impl Segmenter {
