@@ -190,13 +190,25 @@ RSpec.describe ICU4X::DateTimeFormat do
       end
     end
 
+    context "with Date object" do
+      let(:locale) { ICU4X::Locale.parse("en-US") }
+
+      it "formats Date by calling #to_time" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, time_zone: "Asia/Tokyo")
+
+        result = formatter.format(Date.new(2025, 12, 28))
+
+        expect(result).to eq("December 28, 2025")
+      end
+    end
+
     context "with invalid argument" do
       let(:locale) { ICU4X::Locale.parse("en-US") }
       let(:formatter) { ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long) }
 
-      it "raises TypeError when argument is not a Time" do
+      it "raises TypeError when argument does not respond to #to_time" do
         expect { formatter.format("2025-12-28") }
-          .to raise_error(TypeError, /argument must be a Time object/)
+          .to raise_error(TypeError, /argument must be a Time object or respond to #to_time/)
       end
     end
 

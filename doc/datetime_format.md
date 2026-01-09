@@ -33,7 +33,7 @@ module ICU4X
     def initialize(locale, provider:, date_style: nil, time_style: nil, time_zone: nil, calendar: nil) = ...
 
     # Format a time
-    # @param time [Time] Time to format
+    # @param time [Time, #to_time] Time to format (or any object responding to #to_time)
     # @return [String]
     def format(time) = ...
 
@@ -112,6 +112,10 @@ dtf = ICU4X::DateTimeFormat.new(
 
 dtf.format(Time.utc(2025, 12, 28, 9, 30))
 # => "2025年12月28日 9:30"
+
+# Date objects are also supported (via #to_time)
+dtf.format(Date.new(2025, 12, 28))
+# => "2025年12月28日 0:00"
 ```
 
 ### Timezone Conversion
