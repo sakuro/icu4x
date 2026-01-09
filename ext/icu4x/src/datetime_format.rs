@@ -264,27 +264,34 @@ impl DateTimeFormat {
         }
     }
 
-    /// Format a Ruby Time object
+    /// Format a Ruby Time object or any object responding to #to_time
     ///
     /// # Arguments
-    /// * `time` - A Ruby Time object
+    /// * `time` - A Ruby Time object or an object responding to #to_time (e.g., Date, DateTime)
     ///
     /// # Returns
     /// A formatted string
     fn format(&self, time: Value) -> Result<String, Error> {
         let ruby = Ruby::get().expect("Ruby runtime should be available");
 
-        // Validate that time is a Time object
+        // Convert to Time if the object responds to #to_time
+        let time_value = if time.respond_to("to_time", false)? {
+            time.funcall::<_, _, Value>("to_time", ())?
+        } else {
+            time
+        };
+
+        // Validate that the result is a Time object
         let time_class: Value = ruby.eval("Time")?;
-        if !time.is_kind_of(magnus::RClass::try_convert(time_class)?) {
+        if !time_value.is_kind_of(magnus::RClass::try_convert(time_class)?) {
             return Err(Error::new(
                 ruby.exception_type_error(),
-                "argument must be a Time object",
+                "argument must be a Time object or respond to #to_time",
             ));
         }
 
         // Convert Ruby Time to ICU4X DateTime, applying timezone if specified
-        let datetime = self.convert_time_to_datetime(&ruby, time)?;
+        let datetime = self.convert_time_to_datetime(&ruby, time_value)?;
 
         // Format the datetime
         let formatted = self.inner.format(&datetime);
