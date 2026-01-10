@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.8.0] - 2026-01-10
+
 ### Added
 
 - `ICU4X::Locale#maximize!` and `#maximize` methods to expand locale using Likely Subtags algorithm (UTS #35)
