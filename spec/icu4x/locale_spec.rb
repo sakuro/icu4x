@@ -186,4 +186,109 @@ RSpec.describe ICU4X::Locale do
       expect { ICU4X::Locale.parse_posix("") }.to raise_error(ICU4X::LocaleError)
     end
   end
+
+  describe "#maximize!" do
+    it "expands language to full locale and returns self" do
+      locale = ICU4X::Locale.parse("en")
+
+      expect(locale.maximize!).to be(locale)
+      expect(locale.to_s).to eq("en-Latn-US")
+    end
+
+    it "expands zh to zh-Hans-CN" do
+      locale = ICU4X::Locale.parse("zh")
+
+      expect(locale.maximize!).to be(locale)
+      expect(locale.to_s).to eq("zh-Hans-CN")
+    end
+
+    it "expands ja to ja-Jpan-JP" do
+      locale = ICU4X::Locale.parse("ja")
+
+      expect(locale.maximize!).to be(locale)
+      expect(locale.to_s).to eq("ja-Jpan-JP")
+    end
+
+    it "returns nil when already maximized" do
+      locale = ICU4X::Locale.parse("en-Latn-US")
+
+      expect(locale.maximize!).to be_nil
+      expect(locale.to_s).to eq("en-Latn-US")
+    end
+
+    it "handles script inference" do
+      locale = ICU4X::Locale.parse("sr-Latn")
+
+      locale.maximize!
+
+      expect(locale.region).to eq("RS")
+    end
+  end
+
+  describe "#maximize" do
+    it "returns a new maximized locale" do
+      locale = ICU4X::Locale.parse("en")
+
+      result = locale.maximize
+
+      expect(result).not_to be(locale)
+      expect(result.to_s).to eq("en-Latn-US")
+      expect(locale.to_s).to eq("en")
+    end
+
+    it "returns a new object even when already maximized" do
+      locale = ICU4X::Locale.parse("en-Latn-US")
+
+      result = locale.maximize
+
+      expect(result).not_to be(locale)
+      expect(result.to_s).to eq("en-Latn-US")
+    end
+  end
+
+  describe "#minimize!" do
+    it "removes redundant subtags and returns self" do
+      locale = ICU4X::Locale.parse("zh-Hans-CN")
+
+      expect(locale.minimize!).to be(locale)
+      expect(locale.to_s).to eq("zh")
+    end
+
+    it "keeps necessary subtags" do
+      # sr-Latn needs script since sr defaults to Cyrillic
+      locale = ICU4X::Locale.parse("sr-Latn")
+
+      locale.minimize!
+
+      expect(locale.script).to eq("Latn")
+    end
+
+    it "returns nil when already minimal" do
+      locale = ICU4X::Locale.parse("en")
+
+      expect(locale.minimize!).to be_nil
+      expect(locale.to_s).to eq("en")
+    end
+  end
+
+  describe "#minimize" do
+    it "returns a new minimized locale" do
+      locale = ICU4X::Locale.parse("zh-Hans-CN")
+
+      result = locale.minimize
+
+      expect(result).not_to be(locale)
+      expect(result.to_s).to eq("zh")
+      expect(locale.to_s).to eq("zh-Hans-CN")
+    end
+
+    it "returns a new object even when already minimal" do
+      locale = ICU4X::Locale.parse("en")
+
+      result = locale.minimize
+
+      expect(result).not_to be(locale)
+      expect(result.to_s).to eq("en")
+    end
+  end
 end
