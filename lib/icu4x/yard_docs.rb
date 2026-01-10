@@ -274,6 +274,74 @@
 #       # @return [Integer] hash code
 #       #
 #       def hash; end
+#
+#       # Maximizes the locale in place using the Add Likely Subtags algorithm (UTS #35).
+#       #
+#       # Adds likely script and region subtags based on the language.
+#       # This is useful for language negotiation.
+#       #
+#       # @return [self, nil] self if the locale was modified, nil if already maximized
+#       #
+#       # @example
+#       #   locale = ICU4X::Locale.parse("en")
+#       #   locale.maximize!  #=> locale
+#       #   locale.to_s       #=> "en-Latn-US"
+#       #
+#       # @example Already maximized
+#       #   locale = ICU4X::Locale.parse("en-Latn-US")
+#       #   locale.maximize!  #=> nil
+#       #
+#       # @see https://unicode.org/reports/tr35/#Likely_Subtags
+#       #
+#       def maximize!; end
+#
+#       # Returns a new locale with likely subtags added.
+#       #
+#       # Non-destructive version of {#maximize!}. The original locale is unchanged.
+#       #
+#       # @return [Locale] a new locale with likely subtags added
+#       #
+#       # @example
+#       #   locale = ICU4X::Locale.parse("zh")
+#       #   expanded = locale.maximize
+#       #   locale.to_s    #=> "zh" (unchanged)
+#       #   expanded.to_s  #=> "zh-Hans-CN"
+#       #
+#       def maximize; end
+#
+#       # Minimizes the locale in place using the Remove Likely Subtags algorithm (UTS #35).
+#       #
+#       # Removes redundant script and region subtags that can be inferred.
+#       # This is useful for language negotiation.
+#       #
+#       # @return [self, nil] self if the locale was modified, nil if already minimal
+#       #
+#       # @example
+#       #   locale = ICU4X::Locale.parse("ja-Jpan-JP")
+#       #   locale.minimize!  #=> locale
+#       #   locale.to_s       #=> "ja"
+#       #
+#       # @example Already minimal
+#       #   locale = ICU4X::Locale.parse("en")
+#       #   locale.minimize!  #=> nil
+#       #
+#       # @see https://unicode.org/reports/tr35/#Likely_Subtags
+#       #
+#       def minimize!; end
+#
+#       # Returns a new locale with redundant subtags removed.
+#       #
+#       # Non-destructive version of {#minimize!}. The original locale is unchanged.
+#       #
+#       # @return [Locale] a new locale with redundant subtags removed
+#       #
+#       # @example
+#       #   locale = ICU4X::Locale.parse("zh-Hans-CN")
+#       #   minimal = locale.minimize
+#       #   locale.to_s   #=> "zh-Hans-CN" (unchanged)
+#       #   minimal.to_s  #=> "zh"
+#       #
+#       def minimize; end
 #     end
 #
 #     # Provides locale-aware plural rules for cardinal and ordinal numbers.

@@ -1,6 +1,6 @@
 use crate::helpers;
-use icu_locale::Locale as IcuLocale;
-use magnus::{Error, RHash, RModule, Ruby, function, method, prelude::*};
+use icu_locale::{Locale as IcuLocale, LocaleExpander, TransformResult};
+use magnus::{Error, RHash, RModule, Ruby, function, method, prelude::*, typed_data::Obj};
 use std::cell::RefCell;
 
 /// Ruby wrapper for ICU4X Locale
@@ -162,6 +162,48 @@ impl Locale {
     fn eq(&self, other: &Locale) -> bool {
         *self.inner.borrow() == *other.inner.borrow()
     }
+
+    /// Maximize the locale in place (Add Likely Subtags algorithm, UTS #35)
+    /// Returns self if modified, nil if unchanged
+    fn maximize_bang(rb_self: Obj<Self>) -> Option<Obj<Self>> {
+        let expander = LocaleExpander::new_common();
+        let mut locale = rb_self.inner.borrow_mut();
+        match expander.maximize(&mut locale.id) {
+            TransformResult::Modified => Some(rb_self),
+            TransformResult::Unmodified => None,
+        }
+    }
+
+    /// Maximize the locale, returning a new Locale object
+    fn maximize(&self) -> Self {
+        let expander = LocaleExpander::new_common();
+        let mut new_id = self.inner.borrow().id.clone();
+        expander.maximize(&mut new_id);
+        Self {
+            inner: RefCell::new(IcuLocale::from(new_id)),
+        }
+    }
+
+    /// Minimize the locale in place (Remove Likely Subtags algorithm, UTS #35)
+    /// Returns self if modified, nil if unchanged
+    fn minimize_bang(rb_self: Obj<Self>) -> Option<Obj<Self>> {
+        let expander = LocaleExpander::new_common();
+        let mut locale = rb_self.inner.borrow_mut();
+        match expander.minimize(&mut locale.id) {
+            TransformResult::Modified => Some(rb_self),
+            TransformResult::Unmodified => None,
+        }
+    }
+
+    /// Minimize the locale, returning a new Locale object
+    fn minimize(&self) -> Self {
+        let expander = LocaleExpander::new_common();
+        let mut new_id = self.inner.borrow().id.clone();
+        expander.minimize(&mut new_id);
+        Self {
+            inner: RefCell::new(IcuLocale::from(new_id)),
+        }
+    }
 }
 
 pub fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
@@ -174,5 +216,9 @@ pub fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
     class.define_method("extensions", method!(Locale::extensions, 0))?;
     class.define_method("to_s", method!(Locale::to_s, 0))?;
     class.define_method("==", method!(Locale::eq, 1))?;
+    class.define_method("maximize!", method!(Locale::maximize_bang, 0))?;
+    class.define_method("maximize", method!(Locale::maximize, 0))?;
+    class.define_method("minimize!", method!(Locale::minimize_bang, 0))?;
+    class.define_method("minimize", method!(Locale::minimize, 0))?;
     Ok(())
 }

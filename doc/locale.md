@@ -71,6 +71,22 @@ module ICU4X
     # Hash code
     # @return [Integer]
     def hash = ...
+
+    # Maximize locale in place (Add Likely Subtags algorithm, UTS #35)
+    # @return [self, nil] self if modified, nil if unchanged
+    def maximize! = ...
+
+    # Return a new maximized locale
+    # @return [Locale] new locale with likely subtags added
+    def maximize = ...
+
+    # Minimize locale in place (Remove Likely Subtags algorithm, UTS #35)
+    # @return [self, nil] self if modified, nil if unchanged
+    def minimize! = ...
+
+    # Return a new minimized locale
+    # @return [Locale] new locale with redundant subtags removed
+    def minimize = ...
   end
 end
 ```
@@ -105,6 +121,28 @@ loc5.to_s      # => "und"
 # Locales can be used as Hash keys
 cache = {}
 cache[loc] = "cached value"
+
+# Maximize: add likely subtags
+loc6 = ICU4X::Locale.parse("en")
+loc6.maximize!     # => loc6 (self)
+loc6.to_s          # => "en-Latn-US"
+
+# Non-destructive maximize
+loc7 = ICU4X::Locale.parse("zh")
+expanded = loc7.maximize
+loc7.to_s          # => "zh" (unchanged)
+expanded.to_s      # => "zh-Hans-CN"
+
+# Minimize: remove redundant subtags
+loc8 = ICU4X::Locale.parse("ja-Jpan-JP")
+loc8.minimize!     # => loc8 (self)
+loc8.to_s          # => "ja"
+
+# Non-destructive minimize
+loc9 = ICU4X::Locale.parse("en-Latn-US")
+minimal = loc9.minimize
+loc9.to_s          # => "en-Latn-US" (unchanged)
+minimal.to_s       # => "en"
 ```
 
 ---
