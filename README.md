@@ -41,16 +41,11 @@ Prebuilt binary gems are available for x86_64-linux, aarch64-linux, x86_64-darwi
 
 #### Option 1: Use Pre-built Data Gem (Quick Start)
 
-Add a companion data gem for instant setup:
+Add a companion data gem to your Gemfile:
 
 ```ruby
 gem "icu4x"
-gem "icu4x-data-recommended"  # 164 locales, ~24MB
-```
-
-```ruby
-require "icu4x"
-require "icu4x/data/recommended"  # Auto-configures default provider
+gem "icu4x-data-recommended"  # 164 locales, ~24MB, auto-configures default provider
 ```
 
 Available data gems:

@@ -84,11 +84,17 @@ module ICU4X
         config:
       )
 
-      lib_data_dir = gem_dir / "lib" / "icu4x" / "data"
+      lib_dir = gem_dir / "lib"
+      lib_data_dir = lib_dir / "icu4x" / "data"
       lib_data_dir.mkpath
       render_template(
         "lib/icu4x/data/variant.rb.erb",
         lib_data_dir / "#{variant}.rb",
+        variant:
+      )
+      render_template(
+        "lib/icu4x-data-variant.rb.erb",
+        lib_dir / "icu4x-data-#{variant}.rb",
         variant:
       )
 

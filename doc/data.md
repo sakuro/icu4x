@@ -60,13 +60,10 @@ For convenience, pre-generated data gems are available as an alternative to self
 ```ruby
 # Gemfile
 gem "icu4x"
-gem "icu4x-data-recommended"
+gem "icu4x-data-recommended"  # Auto-configures default provider
 ```
 
 ```ruby
-require "icu4x"
-require "icu4x/data/recommended"  # Auto-configures default provider
-
 locale = ICU4X::Locale.parse("ja-JP")
 dtf = ICU4X::DateTimeFormat.new(locale, date_style: :long)
 dtf.format(Time.now)  # => "2025年12月28日"
@@ -74,7 +71,7 @@ dtf.format(Time.now)  # => "2025年12月28日"
 
 ### How It Works
 
-When you require a data gem (e.g., `icu4x/data/recommended`), it automatically calls `ICU4X.configure` to set the `data_path` to the bundled blob file. No manual configuration is needed.
+When you require a data gem (e.g., `require "icu4x-data-recommended"`), it automatically calls `ICU4X.configure` to set the `data_path` to the bundled blob file. No manual configuration is needed.
 
 ### Choosing a Data Gem
 
