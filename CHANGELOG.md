@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+### Added
+
+- Add Ruby 4.0 prebuilt binary support (#101)
+
 ## [0.8.0] - 2026-01-10
 
 ### Added
