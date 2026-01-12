@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+### Added
+
+- Allow data gems to be required by gem name (#104)
+
 ## [0.8.1] - 2026-01-12
 
 ### Added

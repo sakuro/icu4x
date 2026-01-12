@@ -51,6 +51,7 @@ RSpec.describe ICU4X::DataGemTask do
       expect(template_dir / "gemspec.erb").to exist
       expect(template_dir / "README.md.erb").to exist
       expect(template_dir / "lib/icu4x/data/variant.rb.erb").to exist
+      expect(template_dir / "lib/icu4x-data-variant.rb.erb").to exist
     end
   end
 
@@ -97,6 +98,7 @@ RSpec.describe ICU4X::DataGemTask do
       }
 
       expect(gem_contents).to include("lib/icu4x/data/modern.rb")
+      expect(gem_contents).to include("lib/icu4x-data-modern.rb")
       expect(gem_contents).to include("data/modern.postcard")
       expect(gem_contents).to include("LICENSE.txt")
       expect(gem_contents).to include("README.md")
