@@ -41,6 +41,11 @@ jobs:
         GEM_PATH="${GEM_PATH//-//}"  # Convert hyphens to slashes for path
         sed -i 's/VERSION = ".*"/VERSION = "${{ github.event.inputs.version }}"/' "lib/$GEM_PATH/version.rb"
 
+    - name: Update Cargo.toml versions
+      run: |
+        sed -i '0,/^version = /s/^version = ".*"/version = "${{ github.event.inputs.version }}"/' ext/icu4x/Cargo.toml
+        sed -i '0,/^version = /s/^version = ".*"/version = "${{ github.event.inputs.version }}"/' ext/icu4x_macros/Cargo.toml
+
     - name: Update CHANGELOG.md
       run: |
         # Get current date in UTC (GitHub Actions runs in UTC timezone)
@@ -56,11 +61,12 @@ jobs:
       run: |
         GEM_PATH="${{ env.GEM_NAME }}"
         GEM_PATH="${GEM_PATH//-//}"  # Convert hyphens to slashes for path
-        git add "lib/$GEM_PATH/version.rb" CHANGELOG.md
+        git add "lib/$GEM_PATH/version.rb" CHANGELOG.md ext/icu4x/Cargo.toml ext/icu4x_macros/Cargo.toml
         git commit -m "$(cat <<'EOF'
         :bookmark: Prepare release v${{ github.event.inputs.version }}
 
         - Update VERSION constant to ${{ github.event.inputs.version }}
+        - Update Cargo.toml versions to ${{ github.event.inputs.version }}
         - Update CHANGELOG.md for release
         - Add new unreleased section for future changes
         EOF
@@ -106,6 +112,7 @@ jobs:
         ## Changes
 
         - Update VERSION constant to ${{ github.event.inputs.version }}
+        - Update Cargo.toml versions to ${{ github.event.inputs.version }}
         - Update CHANGELOG.md with release date
         - Add new unreleased section for future development
 
@@ -163,6 +170,7 @@ jobs:
         ## Changes
 
         - Update VERSION constant to ${{ github.event.inputs.version }}
+        - Update Cargo.toml versions to ${{ github.event.inputs.version }}
         - Update CHANGELOG.md with release date
         - Add new unreleased section for future development
 
