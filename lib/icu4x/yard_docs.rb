@@ -390,6 +390,27 @@
 #       #
 #       def select(number); end
 #
+#       # Selects the plural category for a range of numbers.
+#       #
+#       # This is equivalent to JavaScript's `Intl.PluralRules.selectRange()`.
+#       # The result depends on both the start and end values according to
+#       # locale-specific range plural rules.
+#       #
+#       # @param start_value [Integer, Float] the start of the range
+#       # @param end_value [Integer, Float] the end of the range
+#       # @return [Symbol] one of `:zero`, `:one`, `:two`, `:few`, `:many`, or `:other`
+#       #
+#       # @example
+#       #   rules.select_range(1, 5)   #=> :other (in English, "1-5 items")
+#       #   rules.select_range(0, 1)   #=> :other (in English)
+#       #
+#       # @example Russian plural ranges
+#       #   ru_rules = ICU4X::PluralRules.new(ICU4X::Locale.parse("ru"), provider: provider)
+#       #   ru_rules.select_range(1, 2)  #=> :few
+#       #   ru_rules.select_range(1, 5)  #=> :many
+#       #
+#       def select_range(start_value, end_value); end
+#
 #       # Returns all plural categories available for this locale.
 #       #
 #       # @return [Array<Symbol>] array of category symbols
