@@ -2,7 +2,7 @@ use crate::data_provider::DataProvider;
 use crate::helpers;
 use fixed_decimal::Decimal;
 use icu::plurals::{
-    PluralCategory, PluralRuleType, PluralRules as IcuPluralRules, PluralRulesPreferences,
+    PluralCategory, PluralRuleType, PluralRulesPreferences, PluralRulesWithRanges,
 };
 use icu_provider::buf::AsDeserializingBufferProvider;
 use magnus::{
@@ -12,7 +12,7 @@ use magnus::{
 /// Ruby wrapper for ICU4X PluralRules
 #[magnus::wrap(class = "ICU4X::PluralRules", free_immediately, size)]
 pub struct PluralRules {
-    inner: IcuPluralRules,
+    inner: PluralRulesWithRanges<icu::plurals::PluralRules>,
     locale_str: String,
     rule_type: PluralRuleType,
 }
@@ -84,15 +84,20 @@ impl PluralRules {
             )
         })?;
 
-        // Create PluralRules from DataProvider
+        // Create PluralRulesWithRanges from DataProvider
         let rules = match rule_type {
-            PluralRuleType::Cardinal => {
-                IcuPluralRules::try_new_cardinal_unstable(&dp.inner.as_deserializing(), prefs)
-            }
-            PluralRuleType::Ordinal => {
-                IcuPluralRules::try_new_ordinal_unstable(&dp.inner.as_deserializing(), prefs)
-            }
-            _ => IcuPluralRules::try_new_cardinal_unstable(&dp.inner.as_deserializing(), prefs),
+            PluralRuleType::Cardinal => PluralRulesWithRanges::try_new_cardinal_unstable(
+                &dp.inner.as_deserializing(),
+                prefs,
+            ),
+            PluralRuleType::Ordinal => PluralRulesWithRanges::try_new_ordinal_unstable(
+                &dp.inner.as_deserializing(),
+                prefs,
+            ),
+            _ => PluralRulesWithRanges::try_new_cardinal_unstable(
+                &dp.inner.as_deserializing(),
+                prefs,
+            ),
         }
         .map_err(|e| Error::new(error_class, format!("Failed to create PluralRules: {}", e)))?;
 
@@ -120,7 +125,7 @@ impl PluralRules {
             // For floats, convert to Decimal to preserve fractional digits
             let s = format!("{}", f);
             if let Ok(fd) = s.parse::<Decimal>() {
-                self.inner.category_for(&fd)
+                self.inner.rules().category_for(&fd)
             } else {
                 return Err(Error::new(
                     ruby.exception_arg_error(),
@@ -129,7 +134,7 @@ impl PluralRules {
             }
         } else if number.is_kind_of(ruby.class_integer()) {
             let n: i64 = TryConvert::try_convert(number)?;
-            self.inner.category_for(n as usize)
+            self.inner.rules().category_for(n as usize)
         } else {
             return Err(Error::new(
                 ruby.exception_type_error(),
@@ -140,6 +145,49 @@ impl PluralRules {
         Ok(Self::category_to_symbol(&ruby, category))
     }
 
+    /// Determine the plural category for a range of numbers
+    ///
+    /// # Arguments
+    /// * `start` - The start of the range (integer or float)
+    /// * `end` - The end of the range (integer or float)
+    ///
+    /// # Returns
+    /// A symbol: :zero, :one, :two, :few, :many, or :other
+    fn select_range(&self, start: Value, end: Value) -> Result<Symbol, Error> {
+        let ruby = Ruby::get().expect("Ruby runtime should be available");
+
+        let start_decimal = Self::value_to_decimal(&ruby, start, "start")?;
+        let end_decimal = Self::value_to_decimal(&ruby, end, "end")?;
+
+        let category = self
+            .inner
+            .category_for_range(&start_decimal, &end_decimal);
+
+        Ok(Self::category_to_symbol(&ruby, category))
+    }
+
+    /// Convert a Ruby Value to a fixed_decimal::Decimal
+    fn value_to_decimal(ruby: &Ruby, value: Value, name: &str) -> Result<Decimal, Error> {
+        if value.is_kind_of(ruby.class_float()) {
+            let f: f64 = TryConvert::try_convert(value)?;
+            let s = format!("{}", f);
+            s.parse::<Decimal>().map_err(|_| {
+                Error::new(
+                    ruby.exception_arg_error(),
+                    format!("Failed to convert {} ({}) to Decimal", name, f),
+                )
+            })
+        } else if value.is_kind_of(ruby.class_integer()) {
+            let n: i64 = TryConvert::try_convert(value)?;
+            Ok(Decimal::from(n))
+        } else {
+            Err(Error::new(
+                ruby.exception_type_error(),
+                format!("{} must be an Integer or Float", name),
+            ))
+        }
+    }
+
     /// Get the list of plural categories for this locale
     ///
     /// # Returns
@@ -147,7 +195,7 @@ impl PluralRules {
     fn categories(&self) -> RArray {
         let ruby = Ruby::get().expect("Ruby runtime should be available");
         let array = ruby.ary_new();
-        for category in self.inner.categories() {
+        for category in self.inner.rules().categories() {
             let _ = array.push(Self::category_to_symbol(&ruby, category));
         }
         array
@@ -187,6 +235,7 @@ pub fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
     let class = module.define_class("PluralRules", ruby.class_object())?;
     class.define_singleton_method("new", function!(PluralRules::new, -1))?;
     class.define_method("select", method!(PluralRules::select, 1))?;
+    class.define_method("select_range", method!(PluralRules::select_range, 2))?;
     class.define_method("categories", method!(PluralRules::categories, 0))?;
     class.define_method(
         "resolved_options",

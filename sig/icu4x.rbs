@@ -49,6 +49,7 @@ module ICU4X
     def self.new: (Locale locale, ?provider: DataProvider, ?type: plural_rule_type) -> PluralRules
 
     def select: (Integer | Float number) -> plural_category
+    def select_range: (Integer | Float start_value, Integer | Float end_value) -> plural_category
     def categories: () -> Array[plural_category]
     def resolved_options: () -> { locale: String, type: plural_rule_type }
   end
