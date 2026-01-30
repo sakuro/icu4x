@@ -34,6 +34,12 @@ module ICU4X
     # @return [Symbol] :zero, :one, :two, :few, :many, :other
     def select(number) = ...
 
+    # Determine plural category for a range
+    # @param start_value [Numeric] Start of the range
+    # @param end_value [Numeric] End of the range
+    # @return [Symbol] :zero, :one, :two, :few, :many, :other
+    def select_range(start_value, end_value) = ...
+
     # List of available categories
     # @return [Array<Symbol>]
     def categories = ...
@@ -108,6 +114,39 @@ pr.select(3)   # => :few   ("3rd")
 pr.select(4)   # => :other ("4th")
 pr.select(21)  # => :one   ("21st")
 pr.select(22)  # => :two   ("22nd")
+```
+
+---
+
+## select_range Method
+
+Determines the plural category for a range of numbers. This is equivalent to JavaScript's `Intl.PluralRules.selectRange()`.
+
+```ruby
+pr = ICU4X::PluralRules.new(
+  ICU4X::Locale.parse("en"),
+  provider: provider,
+  type: :cardinal
+)
+
+pr.select_range(1, 5)   # => :other ("1-5 items")
+pr.select_range(0, 1)   # => :other ("0-1 items")
+```
+
+### Range Behavior by Language
+
+Different languages have different plural range rules:
+
+```ruby
+# Russian
+pr_ru = ICU4X::PluralRules.new(
+  ICU4X::Locale.parse("ru"),
+  provider: provider,
+  type: :cardinal
+)
+
+pr_ru.select_range(1, 2)   # => :few
+pr_ru.select_range(1, 5)   # => :many
 ```
 
 ---

@@ -233,6 +233,70 @@ RSpec.describe ICU4X::PluralRules do
     end
   end
 
+  describe "#select_range" do
+    let(:provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
+
+    context "with English (en) - cardinal" do
+      let(:rules) { ICU4X::PluralRules.new(ICU4X::Locale.parse("en"), provider:, type: :cardinal) }
+
+      it "returns :other for range 1-5" do
+        expect(rules.select_range(1, 5)).to eq(:other)
+      end
+
+      it "returns :other for range 0-1" do
+        expect(rules.select_range(0, 1)).to eq(:other)
+      end
+
+      it "returns :other for range 2-10" do
+        expect(rules.select_range(2, 10)).to eq(:other)
+      end
+    end
+
+    context "with Russian (ru) - cardinal" do
+      let(:rules) { ICU4X::PluralRules.new(ICU4X::Locale.parse("ru"), provider:, type: :cardinal) }
+
+      it "returns :one for range 0-1" do
+        expect(rules.select_range(0, 1)).to eq(:one)
+      end
+
+      it "returns :few for range 1-2" do
+        expect(rules.select_range(1, 2)).to eq(:few)
+      end
+
+      it "returns :many for range 1-5" do
+        expect(rules.select_range(1, 5)).to eq(:many)
+      end
+    end
+
+    context "with floats" do
+      let(:rules) { ICU4X::PluralRules.new(ICU4X::Locale.parse("en"), provider:, type: :cardinal) }
+
+      it "handles float start value" do
+        expect(rules.select_range(1.5, 5)).to eq(:other)
+      end
+
+      it "handles float end value" do
+        expect(rules.select_range(1, 5.5)).to eq(:other)
+      end
+
+      it "handles both float values" do
+        expect(rules.select_range(1.5, 5.5)).to eq(:other)
+      end
+    end
+
+    context "with invalid arguments" do
+      let(:rules) { ICU4X::PluralRules.new(ICU4X::Locale.parse("en"), provider:) }
+
+      it "raises TypeError for string start" do
+        expect { rules.select_range("one", 5) }.to raise_error(TypeError, /start must be an Integer or Float/)
+      end
+
+      it "raises TypeError for string end" do
+        expect { rules.select_range(1, "five") }.to raise_error(TypeError, /end must be an Integer or Float/)
+      end
+    end
+  end
+
   describe "#categories" do
     let(:provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
 
