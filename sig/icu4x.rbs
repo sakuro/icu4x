@@ -107,6 +107,7 @@ module ICU4X
     ) -> DateTimeFormat
 
     def format: (Time time) -> String
+    def format_to_parts: (Time time) -> Array[FormattedPart]
     def resolved_options: () -> {
       locale: String,
       calendar: datetime_calendar,
