@@ -18,6 +18,14 @@ module ICU4X
   class DataGeneratorError < Error
   end
 
+  class FormattedPart
+    attr_reader type: Symbol
+    attr_reader value: String
+
+    def self.[]: (Symbol type, String value) -> FormattedPart
+    def self.new: (type: Symbol, value: String) -> FormattedPart
+  end
+
   class DataProvider
     def self.from_blob: (Pathname path, ?priority: :language | :region) -> DataProvider
   end

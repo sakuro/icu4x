@@ -54,6 +54,28 @@ module ICU4X
   class DataGeneratorError < Error; end
 end
 
+# Define FormattedPart data class for format_to_parts methods
+module ICU4X
+  FormattedPart = Data.define(:type, :value)
+end
+
+# Enhance the FormattedPart data class
+module ICU4X
+  # Represents a part of a formatted string.
+  #
+  # Used by format_to_parts methods in DateTimeFormat, NumberFormat,
+  # ListFormat, and RelativeTimeFormat.
+  #
+  # @!attribute [r] type
+  #   @return [Symbol] The part type (e.g., :integer, :literal, :year)
+  # @!attribute [r] value
+  #   @return [String] The formatted value
+  class FormattedPart
+    # @return [String] Human-readable representation
+    def inspect = "#<ICU4X::FormattedPart type=#{type.inspect} value=#{value.inspect}>"
+  end
+end
+
 # Define Segment data class for Segmenter
 module ICU4X
   class Segmenter
