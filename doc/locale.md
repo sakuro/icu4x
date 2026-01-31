@@ -26,11 +26,14 @@ A class representing locale identifiers. Supports BCP 47 format.
 ```ruby
 module ICU4X
   class Locale
-    # Parse a locale string
+    # Parse a BCP 47 locale string
     # @param locale_str [String] Locale string in BCP 47 format
     # @return [Locale]
     # @raise [LocaleError] If the format is invalid
-    def self.parse(locale_str) = ...
+    def self.parse_bcp47(locale_str) = ...
+
+    # Alias for parse_bcp47
+    alias parse parse_bcp47
 
     # Parse a POSIX locale string
     # @param posix_str [String] Locale string in POSIX format (e.g., "ja_JP.UTF-8")
@@ -94,7 +97,9 @@ end
 ### Usage Examples
 
 ```ruby
-# Parse BCP 47 format
+# Parse BCP 47 format (parse_bcp47 or its alias parse)
+loc = ICU4X::Locale.parse_bcp47("ja-JP")
+# or
 loc = ICU4X::Locale.parse("ja-JP")
 loc.language  # => "ja"
 loc.region    # => "JP"

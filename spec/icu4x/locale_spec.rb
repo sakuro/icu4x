@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 RSpec.describe ICU4X::Locale do
-  describe ".parse" do
+  describe ".parse_bcp47" do
     it "parses a simple language code" do
-      locale = ICU4X::Locale.parse("en")
+      locale = ICU4X::Locale.parse_bcp47("en")
 
       expect(locale.language).to eq("en")
       expect(locale.script).to be_nil
@@ -11,7 +11,7 @@ RSpec.describe ICU4X::Locale do
     end
 
     it "parses language-region format" do
-      locale = ICU4X::Locale.parse("ja-JP")
+      locale = ICU4X::Locale.parse_bcp47("ja-JP")
 
       expect(locale.language).to eq("ja")
       expect(locale.region).to eq("JP")
@@ -19,7 +19,7 @@ RSpec.describe ICU4X::Locale do
     end
 
     it "parses language-script-region format" do
-      locale = ICU4X::Locale.parse("zh-Hans-CN")
+      locale = ICU4X::Locale.parse_bcp47("zh-Hans-CN")
 
       expect(locale.language).to eq("zh")
       expect(locale.script).to eq("Hans")
@@ -27,7 +27,20 @@ RSpec.describe ICU4X::Locale do
     end
 
     it "raises LocaleError for invalid locale string" do
-      expect { ICU4X::Locale.parse("!!!invalid") }.to raise_error(ICU4X::LocaleError, /Invalid locale/)
+      expect { ICU4X::Locale.parse_bcp47("!!!invalid") }.to raise_error(ICU4X::LocaleError, /Invalid locale/)
+    end
+  end
+
+  describe ".parse" do
+    it "is an alias for .parse_bcp47" do
+      expect(ICU4X::Locale.method(:parse).original_name).to eq(:parse_bcp47)
+    end
+
+    it "parses BCP 47 locale string" do
+      locale = ICU4X::Locale.parse("ja-JP")
+
+      expect(locale.language).to eq("ja")
+      expect(locale.region).to eq("JP")
     end
   end
 

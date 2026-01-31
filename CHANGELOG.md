@@ -4,6 +4,7 @@
 
 - `ICU4X::PluralRules#select_range` method for plural category selection on number ranges (#106)
 - Allow data gems to be required by gem name (#104)
+- `ICU4X::Locale.parse_bcp47` method for explicit BCP 47 parsing; `parse` is now an alias (#108)
 
 ## [0.8.1] - 2026-01-12
 

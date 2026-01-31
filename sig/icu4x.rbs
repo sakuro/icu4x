@@ -28,7 +28,8 @@ module ICU4X
   end
 
   class Locale
-    def self.parse: (String locale_str) -> Locale
+    def self.parse_bcp47: (String locale_str) -> Locale
+    alias self.parse self.parse_bcp47
     def self.parse_posix: (String posix_str) -> Locale
 
     def language: () -> String?
