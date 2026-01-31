@@ -11,7 +11,7 @@ pub struct Locale {
 
 impl Locale {
     /// Parse a BCP 47 locale string
-    fn parse(ruby: &Ruby, s: String) -> Result<Self, Error> {
+    fn parse_bcp47(ruby: &Ruby, s: String) -> Result<Self, Error> {
         let locale: IcuLocale = s.parse().map_err(|e| {
             Error::new(
                 helpers::get_exception_class(ruby, "ICU4X::LocaleError"),
@@ -32,7 +32,7 @@ impl Locale {
     fn parse_posix(ruby: &Ruby, posix_str: String) -> Result<Self, Error> {
         // Handle special cases
         if posix_str == "C" || posix_str == "POSIX" {
-            return Self::parse(ruby, "und".to_string());
+            return Self::parse_bcp47(ruby, "und".to_string());
         }
 
         // Handle empty string
@@ -90,7 +90,7 @@ impl Locale {
             bcp47.push_str(&t.to_uppercase());
         }
 
-        Self::parse(ruby, bcp47)
+        Self::parse_bcp47(ruby, bcp47)
     }
 
     /// Get the language component
@@ -208,7 +208,8 @@ impl Locale {
 
 pub fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
     let class = module.define_class("Locale", ruby.class_object())?;
-    class.define_singleton_method("parse", function!(Locale::parse, 1))?;
+    class.define_singleton_method("parse_bcp47", function!(Locale::parse_bcp47, 1))?;
+    class.singleton_class()?.define_alias("parse", "parse_bcp47")?;
     class.define_singleton_method("parse_posix", function!(Locale::parse_posix, 1))?;
     class.define_method("language", method!(Locale::language, 0))?;
     class.define_method("script", method!(Locale::script, 0))?;
