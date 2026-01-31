@@ -8,6 +8,7 @@ This document tracks which JavaScript Intl API options are supported in ICU4X Ru
 - Possible - ICU4X Rust crate supports this feature
 - Experimental - Available via ICU4X experimental features
 - Planned - ICU4X is actively developing this feature
+- Blocked - Feature not available in ICU4X
 - Not Planned - Different design approach in ICU4X
 
 ---
@@ -22,16 +23,20 @@ This document tracks which JavaScript Intl API options are supported in ICU4X Ru
 | `time_style` | `:full`, `:long`, `:medium`, `:short` |
 | `time_zone` | IANA timezone name |
 | `calendar` | `:gregory`, `:japanese`, `:buddhist`, etc. |
+| `hour_cycle` | `:h11`, `:h12`, `:h23` |
+
+### Supported Methods
+
+- `format(time)` - Format a time value
+- `format_to_parts(time)` - Get formatted parts array
 
 ### Missing Options
 
 | Option | Intl Feature | Status |
 |--------|-------------|--------|
-| `hour_cycle` | 12/24 hour format control | Possible |
 | `day_period` | AM/PM display style | Possible |
 | Component options | Individual field control (year, month, day, etc.) | Experimental |
 | `numbering_system` | Numbering system selection | Possible |
-| `format_to_parts` | Get formatted parts array | Possible |
 
 ---
 
@@ -49,6 +54,11 @@ This document tracks which JavaScript Intl API options are supported in ICU4X Ru
 | `maximum_fraction_digits` | Integer |
 | `rounding_mode` | `:ceil`, `:floor`, `:expand`, `:trunc`, `:half_ceil`, `:half_floor`, `:half_expand`, `:half_trunc`, `:half_even` |
 
+### Supported Methods
+
+- `format(number)` - Format a number value
+- `format_to_parts(number)` - Get formatted parts array
+
 ### Missing Options
 
 | Option | Intl Feature | Status |
@@ -62,7 +72,6 @@ This document tracks which JavaScript Intl API options are supported in ICU4X Ru
 | `minimum_significant_digits` | Significant digits control | Possible |
 | `maximum_significant_digits` | Significant digits control | Possible |
 | `numbering_system` | Numbering system selection | Possible |
-| `format_to_parts` | Get formatted parts array | Possible |
 
 ---
 
@@ -75,11 +84,10 @@ This document tracks which JavaScript Intl API options are supported in ICU4X Ru
 | `type` | `:conjunction`, `:disjunction`, `:unit` |
 | `style` | `:long`, `:short`, `:narrow` |
 
-### Missing Options
+### Supported Methods
 
-| Option | Intl Feature | Status |
-|--------|-------------|--------|
-| `format_to_parts` | Get formatted parts array | Possible |
+- `format(list)` - Format an array of strings
+- `format_to_parts(list)` - Get formatted parts array
 
 ---
 
@@ -96,12 +104,16 @@ This document tracks which JavaScript Intl API options are supported in ICU4X Ru
 
 `:second`, `:minute`, `:hour`, `:day`, `:week`, `:month`, `:quarter`, `:year`
 
+### Supported Methods
+
+- `format(value, unit)` - Format a relative time value
+- `format_to_parts(value, unit)` - Get formatted parts array
+
 ### Missing Options
 
 | Option | Intl Feature | Status |
 |--------|-------------|--------|
 | `numbering_system` | Numbering system selection | Possible |
-| `format_to_parts` | Get formatted parts array | Possible |
 
 ---
 
@@ -115,13 +127,17 @@ This document tracks which JavaScript Intl API options are supported in ICU4X Ru
 | `style` | `:long`, `:short`, `:narrow` |
 | `fallback` | `:code`, `:none` |
 
+### Supported Methods
+
+- `of(code)` - Get display name for a code
+
 ### Missing Options
 
 | Option | Intl Feature | Status |
 |--------|-------------|--------|
-| `type: :currency` | Currency name display | Possible |
-| `type: :calendar` | Calendar name display | Possible |
-| `type: :date_time_field` | DateTime field names | Possible |
+| `type: :currency` | Currency name display | Blocked (not in ICU4X displaynames) |
+| `type: :calendar` | Calendar name display | Blocked (not in ICU4X displaynames) |
+| `type: :date_time_field` | DateTime field names | Blocked (not in ICU4X displaynames) |
 | `language_display` | dialect/standard mode | Possible |
 
 ---
@@ -150,20 +166,15 @@ This document tracks which JavaScript Intl API options are supported in ICU4X Ru
 
 ## Implementation Priority
 
-### High Priority (Immediately Implementable)
-
-1. **`format_to_parts` method** - High value across all formatters
-2. **DisplayNames additional types** - currency, calendar, date_time_field
-3. **DateTimeFormat hour_cycle** - Commonly requested option
-
 ### Medium Priority (Experimental Features)
 
-4. **DateTimeFormat component options** - Experimental but in demand
-5. **numbering_system** - Useful for multilingual support
+1. **DateTimeFormat component options** - Experimental but in demand
+2. **numbering_system** - Useful for multilingual support
 
 ### Low Priority (Waiting for ICU4X)
 
-6. **NumberFormat extensions** - Waiting for ICU4X #6804 (currency_display, unit, compact, etc.)
+3. **NumberFormat extensions** - Waiting for ICU4X #6804 (currency_display, unit, compact, etc.)
+4. **DisplayNames additional types** - Blocked (currency, calendar, date_time_field not in ICU4X displaynames module)
 
 ---
 
