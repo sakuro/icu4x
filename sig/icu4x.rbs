@@ -153,6 +153,7 @@ module ICU4X
     ) -> ListFormat
 
     def format: (Array[String] list) -> String
+    def format_to_parts: (Array[String] list) -> Array[FormattedPart]
     def resolved_options: () -> {
       locale: String,
       type: list_format_type,

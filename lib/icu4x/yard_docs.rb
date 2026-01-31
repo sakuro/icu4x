@@ -682,6 +682,29 @@
 #       #
 #       def format(list); end
 #
+#       # Formats a list of strings and returns an array of parts.
+#       #
+#       # Each part contains a type and value, allowing for custom styling
+#       # or processing of individual components.
+#       #
+#       # @param list [Array<String>] the list items to format
+#       # @return [Array<FormattedPart>] array of formatted parts
+#       #
+#       # @example
+#       #   parts = formatter.format_to_parts(["Apple", "Banana", "Cherry"])
+#       #   # => [
+#       #   #   #<ICU4X::FormattedPart type=:element value="Apple">,
+#       #   #   #<ICU4X::FormattedPart type=:literal value=", ">,
+#       #   #   #<ICU4X::FormattedPart type=:element value="Banana">,
+#       #   #   #<ICU4X::FormattedPart type=:literal value=", and ">,
+#       #   #   #<ICU4X::FormattedPart type=:element value="Cherry">
+#       #   # ]
+#       #
+#       # @example Reconstruct the formatted string
+#       #   parts.map(&:value).join  #=> "Apple, Banana, and Cherry"
+#       #
+#       def format_to_parts(list); end
+#
 #       # Returns the resolved options for this instance.
 #       #
 #       # @return [Hash] options hash with keys:
