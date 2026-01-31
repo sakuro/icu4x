@@ -479,6 +479,32 @@
 #       #
 #       def format(number); end
 #
+#       # Formats a number and returns an array of parts.
+#       #
+#       # Each part contains a type and value, allowing for custom styling
+#       # or processing of individual components.
+#       #
+#       # @param number [Integer, Float, BigDecimal] the number to format
+#       # @return [Array<FormattedPart>] array of formatted parts
+#       #
+#       # @note For `style: :percent` and `style: :currency`, the current ICU4X
+#       #   experimental formatters do not provide part annotations. These styles
+#       #   return a single `:literal` part containing the entire formatted string.
+#       #
+#       # @example
+#       #   parts = formatter.format_to_parts(-1234.56)
+#       #   # => [
+#       #   #   #<ICU4X::FormattedPart type=:minus_sign value="-">,
+#       #   #   #<ICU4X::FormattedPart type=:integer value="1,234">,
+#       #   #   #<ICU4X::FormattedPart type=:decimal value=".">,
+#       #   #   #<ICU4X::FormattedPart type=:fraction value="56">
+#       #   # ]
+#       #
+#       # @example Reconstruct the formatted string
+#       #   parts.map(&:value).join  #=> "-1,234.56"
+#       #
+#       def format_to_parts(number); end
+#
 #       # Returns the resolved options for this instance.
 #       #
 #       # @return [Hash] options hash with keys:
@@ -534,6 +560,35 @@
 #       # @return [String] the formatted date/time string
 #       #
 #       def format(time); end
+#
+#       # Formats a time value and returns an array of parts.
+#       #
+#       # Each part contains a type and value, allowing for custom styling
+#       # or processing of individual components.
+#       #
+#       # @param time [Time, #to_time] the time to format (or any object responding to #to_time)
+#       # @return [Array<FormattedPart>] array of formatted parts
+#       #
+#       # @example
+#       #   parts = formatter.format_to_parts(Time.utc(2025, 1, 31))
+#       #   # => [
+#       #   #   #<ICU4X::FormattedPart type=:month value="January">,
+#       #   #   #<ICU4X::FormattedPart type=:literal value=" ">,
+#       #   #   #<ICU4X::FormattedPart type=:day value="31">,
+#       #   #   #<ICU4X::FormattedPart type=:literal value=", ">,
+#       #   #   #<ICU4X::FormattedPart type=:year value="2025">
+#       #   # ]
+#       #
+#       # @example Reconstruct the formatted string
+#       #   parts.map(&:value).join  #=> "January 31, 2025"
+#       #
+#       # @example Japanese calendar with era
+#       #   formatter = ICU4X::DateTimeFormat.new(locale, date_style: :long, calendar: :japanese)
+#       #   parts = formatter.format_to_parts(Time.utc(2025, 1, 31))
+#       #   era_part = parts.find { |p| p.type == :era }
+#       #   era_part.value  #=> "令和"
+#       #
+#       def format_to_parts(time); end
 #
 #       # Returns the resolved options for this instance.
 #       #
