@@ -1,6 +1,8 @@
 use crate::data_provider::DataProvider;
 use crate::helpers;
+use crate::parts_collector::{PartsCollector, parts_to_ruby_array};
 use fixed_decimal::Decimal;
+use icu::decimal::parts as decimal_parts;
 use icu::experimental::relativetime::options::Numeric;
 use icu::experimental::relativetime::{
     RelativeTimeFormatter, RelativeTimeFormatterOptions, RelativeTimeFormatterPreferences,
@@ -8,9 +10,10 @@ use icu::experimental::relativetime::{
 use icu_provider::buf::AsDeserializingBufferProvider;
 use icu4x_macros::RubySymbol;
 use magnus::{
-    Error, ExceptionClass, RHash, RModule, Ruby, Symbol, TryConvert, Value, function, method,
-    prelude::*,
+    Error, ExceptionClass, RArray, RHash, RModule, Ruby, Symbol, TryConvert, Value, function,
+    method, prelude::*,
 };
+use writeable::{Part, Writeable};
 
 /// The style of relative time formatting
 #[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
@@ -61,6 +64,17 @@ impl Unit {
             Unit::Quarter => 6,
             Unit::Year => 7,
         }
+    }
+}
+
+/// Convert ICU4X relative time Part to Ruby symbol name
+fn part_to_symbol_name(part: &Part) -> &'static str {
+    if *part == decimal_parts::INTEGER {
+        "integer"
+    } else if part.category == "relativetime" && part.value == "literal" {
+        "literal"
+    } else {
+        "literal"
     }
 }
 
@@ -228,15 +242,45 @@ impl RelativeTimeFormat {
     /// A formatted string
     fn format(&self, value: i64, unit: Symbol) -> Result<String, Error> {
         let ruby = Ruby::get().expect("Ruby runtime should be available");
-
-        let unit = Unit::from_ruby_symbol(&ruby, unit, "unit")?;
-        let formatter = &self.formatters[unit.index()];
-
-        // Convert i64 to Decimal
-        let decimal = Decimal::from(value);
-
+        let (formatter, decimal) = self.prepare_value(&ruby, value, unit)?;
         let formatted = formatter.format(decimal);
         Ok(formatted.to_string())
+    }
+
+    /// Format a relative time value and return an array of FormattedPart
+    ///
+    /// # Arguments
+    /// * `value` - The relative time value (negative = past, positive = future)
+    /// * `unit` - The time unit (:second, :minute, :hour, :day, :week, :month, :quarter, :year)
+    ///
+    /// # Returns
+    /// An array of FormattedPart objects with :type and :value
+    fn format_to_parts(&self, value: i64, unit: Symbol) -> Result<RArray, Error> {
+        let ruby = Ruby::get().expect("Ruby runtime should be available");
+        let (formatter, decimal) = self.prepare_value(&ruby, value, unit)?;
+
+        let formatted = formatter.format(decimal);
+        let mut collector = PartsCollector::new();
+        formatted
+            .write_to_parts(&mut collector)
+            .map_err(|e| Error::new(ruby.exception_runtime_error(), format!("{}", e)))?;
+
+        parts_to_ruby_array(&ruby, collector, part_to_symbol_name)
+    }
+
+    /// Prepare value for formatting.
+    ///
+    /// Validates unit and converts value to Decimal.
+    fn prepare_value<'a>(
+        &'a self,
+        ruby: &Ruby,
+        value: i64,
+        unit: Symbol,
+    ) -> Result<(&'a RelativeTimeFormatter, Decimal), Error> {
+        let unit = Unit::from_ruby_symbol(ruby, unit, "unit")?;
+        let formatter = &self.formatters[unit.index()];
+        let decimal = Decimal::from(value);
+        Ok((formatter, decimal))
     }
 
     /// Get the resolved options
@@ -263,6 +307,10 @@ pub fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
     let class = module.define_class("RelativeTimeFormat", ruby.class_object())?;
     class.define_singleton_method("new", function!(RelativeTimeFormat::new, -1))?;
     class.define_method("format", method!(RelativeTimeFormat::format, 2))?;
+    class.define_method(
+        "format_to_parts",
+        method!(RelativeTimeFormat::format_to_parts, 2),
+    )?;
     class.define_method(
         "resolved_options",
         method!(RelativeTimeFormat::resolved_options, 0),

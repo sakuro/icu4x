@@ -639,6 +639,26 @@
 #       #
 #       def format(value, unit); end
 #
+#       # Formats a relative time value and returns an array of parts.
+#       #
+#       # @param value [Integer] the relative time value (negative for past, positive for future)
+#       # @param unit [Symbol] time unit: `:second`, `:minute`, `:hour`, `:day`,
+#       #   `:week`, `:month`, `:quarter`, or `:year`
+#       # @return [Array<FormattedPart>] array of formatted parts
+#       #
+#       # @note The current ICU4X experimental RelativeTimeFormatter does not
+#       #   provide separate part annotations for the numeric value. The entire
+#       #   formatted string is returned as a single `:literal` part.
+#       #
+#       # @example
+#       #   parts = formatter.format_to_parts(-3, :day)
+#       #   # => [#<ICU4X::FormattedPart type=:literal value="3 days ago">]
+#       #
+#       # @example Reconstruct the formatted string
+#       #   parts.map(&:value).join  #=> "3 days ago"
+#       #
+#       def format_to_parts(value, unit); end
+#
 #       # Returns the resolved options for this instance.
 #       #
 #       # @return [Hash] options hash with keys:

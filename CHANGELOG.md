@@ -2,6 +2,7 @@
 
 ### Added
 
+- `ICU4X::RelativeTimeFormat#format_to_parts` method for breaking down formatted output into typed parts (#117)
 - `ICU4X::ListFormat#format_to_parts` method for breaking down formatted output into typed parts (#116)
 - `ICU4X::DateTimeFormat#format_to_parts` method for breaking down formatted output into typed parts (#114)
 - `ICU4X::NumberFormat#format_to_parts` method for breaking down formatted output into typed parts (#115)

@@ -131,6 +131,7 @@ module ICU4X
     ) -> RelativeTimeFormat
 
     def format: (Integer value, relative_time_unit unit) -> String
+    def format_to_parts: (Integer value, relative_time_unit unit) -> Array[FormattedPart]
     def resolved_options: () -> {
       locale: String,
       style: relative_time_format_style,
