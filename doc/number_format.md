@@ -43,6 +43,11 @@ module ICU4X
     # @return [String]
     def format(number) = ...
 
+    # Format a number and return an array of parts
+    # @param number [Numeric] Number to format (Integer, Float, BigDecimal)
+    # @return [Array<FormattedPart>]
+    def format_to_parts(number) = ...
+
     # Get resolved options
     # @return [Hash]
     def resolved_options = ...
@@ -192,24 +197,56 @@ nf.format(BigDecimal("12345678901234567890.123456789"))
 
 ---
 
-## Unimplemented Features
+## format_to_parts
 
-The following features are not implemented due to ICU4X support limitations.
+Break down formatted output into typed parts. Useful for custom styling or processing of individual components.
 
-### format_to_parts / FormattedPart
+### Part Types
 
-Functionality to break down formatted results into parts. On hold because ICU4X's experimental crate (Currency/Percent) does not support parts output.
+| Type | Description | Example |
+|------|-------------|---------|
+| `:integer` | Integer part | "1,234" |
+| `:fraction` | Fractional part | "56" |
+| `:decimal` | Decimal separator | "." |
+| `:group` | Grouping separator | "," |
+| `:minus_sign` | Negative sign | "-" |
+| `:plus_sign` | Positive sign | "+" |
+| `:literal` | Other characters | " " |
+
+### Example
 
 ```ruby
-# Planned API
-module ICU4X
-  class NumberFormat
-    FormattedPart = Data.define(:type, :value)
+nf = ICU4X::NumberFormat.new(
+  ICU4X::Locale.parse("en-US"),
+  provider: provider
+)
 
-    # @param number [Numeric] Number to format
-    # @return [Array<FormattedPart>]
-    def format_to_parts(number) = ...
-  end
-end
+parts = nf.format_to_parts(-1234.56)
+# => [
+#   #<ICU4X::FormattedPart type=:minus_sign value="-">,
+#   #<ICU4X::FormattedPart type=:integer value="1,234">,
+#   #<ICU4X::FormattedPart type=:decimal value=".">,
+#   #<ICU4X::FormattedPart type=:fraction value="56">
+# ]
+
+# Reconstruct the formatted string
+parts.map(&:value).join
+# => "-1,234.56"
+```
+
+### Limitations
+
+For `style: :percent` and `style: :currency`, the current ICU4X experimental formatters do not provide part annotations. These styles return a single `:literal` part containing the entire formatted string.
+
+```ruby
+# Percent style - returns single literal part
+nf = ICU4X::NumberFormat.new(locale, provider: provider, style: :percent)
+nf.format_to_parts(0.25)
+# => [#<ICU4X::FormattedPart type=:literal value="25%">]
+
+# Currency style - returns single literal part
+nf = ICU4X::NumberFormat.new(locale, provider: provider, style: :currency, currency: "USD")
+nf.format_to_parts(100)
+# => [#<ICU4X::FormattedPart type=:literal value="$100">]
 ```
 
