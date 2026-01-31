@@ -428,4 +428,86 @@ RSpec.describe ICU4X::NumberFormat do
       })
     end
   end
+
+  describe "#format_to_parts" do
+    let(:provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
+    let(:locale) { ICU4X::Locale.parse("en-US") }
+
+    context "with decimal style" do
+      let(:formatter) { ICU4X::NumberFormat.new(locale, provider:) }
+
+      it "returns an array of FormattedPart objects" do
+        parts = formatter.format_to_parts(1234.56)
+
+        expect(parts).to be_an(Array)
+        expect(parts).to all(be_a(ICU4X::FormattedPart))
+      end
+
+      it "includes integer, decimal, and fraction parts" do
+        parts = formatter.format_to_parts(1234.56)
+        types = parts.map(&:type)
+
+        expect(types).to include(:integer, :decimal, :fraction)
+      end
+
+      it "reconstructs the formatted string when joined" do
+        parts = formatter.format_to_parts(1234.56)
+        joined = parts.map(&:value).join
+
+        expect(joined).to eq(formatter.format(1234.56))
+      end
+
+      it "includes minus_sign for negative numbers" do
+        parts = formatter.format_to_parts(-1234.56)
+        types = parts.map(&:type)
+
+        expect(types).to include(:minus_sign)
+      end
+    end
+
+    context "with integer only" do
+      let(:formatter) { ICU4X::NumberFormat.new(locale, provider:) }
+
+      it "includes only integer part" do
+        parts = formatter.format_to_parts(1234)
+        types = parts.map(&:type)
+
+        expect(types).to include(:integer)
+        expect(types).not_to include(:decimal, :fraction)
+      end
+    end
+
+    context "with invalid number" do
+      let(:formatter) { ICU4X::NumberFormat.new(locale, provider:) }
+
+      it "raises TypeError for string" do
+        expect { formatter.format_to_parts("1234") }
+          .to raise_error(TypeError, /number must be an Integer, Float, or BigDecimal/)
+      end
+    end
+
+    context "with percent style" do
+      let(:formatter) { ICU4X::NumberFormat.new(locale, provider:, style: :percent) }
+
+      it "includes percent_sign part" do
+        pending "ICU4X experimental percent formatter does not provide part annotations"
+        parts = formatter.format_to_parts(0.1234)
+        types = parts.map(&:type)
+
+        expect(types).to include(:percent_sign)
+      end
+    end
+
+    context "with currency style" do
+      let(:formatter) { ICU4X::NumberFormat.new(locale, provider:, style: :currency, currency: "USD") }
+
+      it "includes currency part" do
+        pending "ICU4X experimental currency formatter does not provide part annotations"
+        parts = formatter.format_to_parts(1234.56)
+        types = parts.map(&:type)
+
+        expect(types).to include(:currency)
+      end
+    end
+  end
 end

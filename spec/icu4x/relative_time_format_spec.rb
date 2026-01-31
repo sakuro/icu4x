@@ -275,6 +275,82 @@ RSpec.describe ICU4X::RelativeTimeFormat do
     end
   end
 
+  describe "#format_to_parts" do
+    let(:provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
+    let(:locale) { ICU4X::Locale.parse("en") }
+    let(:rtf) { ICU4X::RelativeTimeFormat.new(locale, provider:) }
+
+    it "returns an array of FormattedPart" do
+      parts = rtf.format_to_parts(-3, :day)
+
+      expect(parts).to all(be_a(ICU4X::FormattedPart))
+    end
+
+    # NOTE: ICU4X experimental RelativeTimeFormatter does not provide separate
+    # part annotations for the numeric value. The entire formatted string is
+    # returned as a single :literal part.
+    it "returns literal part for past time" do
+      parts = rtf.format_to_parts(-3, :day)
+
+      expect(parts.map(&:type)).to eq([:literal])
+      expect(parts.map(&:value)).to eq(["3 days ago"])
+    end
+
+    it "returns literal part for future time" do
+      parts = rtf.format_to_parts(2, :hour)
+
+      expect(parts.map(&:type)).to eq([:literal])
+      expect(parts.map(&:value)).to eq(["in 2 hours"])
+    end
+
+    it "can reconstruct formatted string from parts" do
+      value = -5
+      unit = :minute
+      parts = rtf.format_to_parts(value, unit)
+
+      expect(parts.map(&:value).join).to eq(rtf.format(value, unit))
+    end
+
+    context "with numeric: :auto" do
+      let(:rtf) { ICU4X::RelativeTimeFormat.new(locale, provider:, numeric: :auto) }
+
+      it "returns single literal part for yesterday" do
+        parts = rtf.format_to_parts(-1, :day)
+
+        expect(parts.map(&:type)).to eq([:literal])
+        expect(parts.map(&:value)).to eq(["yesterday"])
+      end
+
+      it "returns single literal part for today" do
+        parts = rtf.format_to_parts(0, :day)
+
+        expect(parts.map(&:type)).to eq([:literal])
+        expect(parts.map(&:value)).to eq(["today"])
+      end
+
+      it "returns single literal part for tomorrow" do
+        parts = rtf.format_to_parts(1, :day)
+
+        expect(parts.map(&:type)).to eq([:literal])
+        expect(parts.map(&:value)).to eq(["tomorrow"])
+      end
+
+      it "returns single literal part for larger values" do
+        parts = rtf.format_to_parts(-2, :day)
+
+        expect(parts.map(&:type)).to eq([:literal])
+        expect(parts.map(&:value)).to eq(["2 days ago"])
+      end
+    end
+
+    context "with invalid unit" do
+      it "raises ArgumentError for invalid unit" do
+        expect { rtf.format_to_parts(-1, :invalid) }
+          .to raise_error(ArgumentError, /unit must be :second, :minute, :hour, :day, :week, :month, :quarter, :year/)
+      end
+    end
+  end
+
   describe "#resolved_options" do
     let(:provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
 

@@ -84,6 +84,7 @@ module ICU4X
     ) -> NumberFormat
 
     def format: (Integer | Float | BigDecimal number) -> String
+    def format_to_parts: (Integer | Float | BigDecimal number) -> Array[FormattedPart]
     def resolved_options: () -> {
       locale: String,
       style: number_format_style,
@@ -107,6 +108,7 @@ module ICU4X
     ) -> DateTimeFormat
 
     def format: (Time time) -> String
+    def format_to_parts: (Time time) -> Array[FormattedPart]
     def resolved_options: () -> {
       locale: String,
       calendar: datetime_calendar,
@@ -129,6 +131,7 @@ module ICU4X
     ) -> RelativeTimeFormat
 
     def format: (Integer value, relative_time_unit unit) -> String
+    def format_to_parts: (Integer value, relative_time_unit unit) -> Array[FormattedPart]
     def resolved_options: () -> {
       locale: String,
       style: relative_time_format_style,
@@ -151,6 +154,7 @@ module ICU4X
     ) -> ListFormat
 
     def format: (Array[String] list) -> String
+    def format_to_parts: (Array[String] list) -> Array[FormattedPart]
     def resolved_options: () -> {
       locale: String,
       type: list_format_type,

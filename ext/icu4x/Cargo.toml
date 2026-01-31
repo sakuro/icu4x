@@ -9,6 +9,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 magnus = "0.8"
+writeable = "0.6"
 icu_locale = "2.1"
 icu_provider = "2.1"
 icu_provider_blob = { version = "2.1", features = ["alloc", "export"] }

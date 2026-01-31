@@ -37,6 +37,11 @@ module ICU4X
     # @return [String]
     def format(time) = ...
 
+    # Format a time and return an array of parts
+    # @param time [Time, #to_time] Time to format (or any object responding to #to_time)
+    # @return [Array<FormattedPart>]
+    def format_to_parts(time) = ...
+
     # Get resolved options
     # @return [Hash]
     def resolved_options = ...
@@ -205,25 +210,50 @@ Time.utc(...)              →    Get Unix timestamp from Ruby Time
 
 ---
 
-## Unimplemented Features
+## format_to_parts
 
-The following features are not implemented due to ICU4X support limitations.
+Break down formatted output into typed parts. Useful for custom styling or processing of individual components.
 
-### format_to_parts / FormattedPart
+### Part Types
 
-Functionality to break down formatted results into parts. On hold because ICU4X's parts output does not match the expected structure.
+| Type | Description | Example |
+|------|-------------|---------|
+| `:year` | Year | "2025" |
+| `:month` | Month | "January", "12" |
+| `:day` | Day of month | "28" |
+| `:weekday` | Day of week | "Sunday" |
+| `:hour` | Hour | "9" |
+| `:minute` | Minute | "30" |
+| `:second` | Second | "45" |
+| `:day_period` | AM/PM | "AM", "午前" |
+| `:era` | Era name | "令和", "Reiwa", "BE" |
+| `:time_zone_name` | Timezone name | "JST" |
+| `:literal` | Separators and punctuation | " ", "/", "年" |
+
+### Example
 
 ```ruby
-# Planned API
-module ICU4X
-  class DateTimeFormat
-    FormattedPart = Data.define(:type, :value)
+dtf = ICU4X::DateTimeFormat.new(
+  ICU4X::Locale.parse("ja-JP"),
+  provider: provider,
+  date_style: :long,
+  calendar: :japanese
+)
 
-    # @param time [Time] Time to format
-    # @return [Array<FormattedPart>]
-    def format_to_parts(time) = ...
-  end
-end
+parts = dtf.format_to_parts(Time.utc(2025, 1, 31))
+# => [
+#   #<ICU4X::FormattedPart type=:era value="令和">,
+#   #<ICU4X::FormattedPart type=:year value="7">,
+#   #<ICU4X::FormattedPart type=:literal value="年">,
+#   #<ICU4X::FormattedPart type=:month value="1">,
+#   #<ICU4X::FormattedPart type=:literal value="月">,
+#   #<ICU4X::FormattedPart type=:day value="31">,
+#   #<ICU4X::FormattedPart type=:literal value="日">
+# ]
+
+# Reconstruct the formatted string
+parts.map(&:value).join
+# => "令和7年1月31日"
 ```
 
 ---

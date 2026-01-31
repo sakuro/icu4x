@@ -1,7 +1,9 @@
 use crate::data_provider::DataProvider;
 use crate::helpers;
+use crate::parts_collector::{PartsCollector, parts_to_ruby_array};
 use fixed_decimal::{Decimal, SignedRoundingMode, UnsignedRoundingMode};
 use icu::decimal::options::{DecimalFormatterOptions, GroupingStrategy};
+use icu::decimal::parts as decimal_parts;
 use icu::decimal::{DecimalFormatter, DecimalFormatterPreferences};
 use icu::experimental::dimension::currency::CurrencyCode;
 use icu::experimental::dimension::currency::formatter::{
@@ -14,10 +16,9 @@ use icu::experimental::dimension::percent::formatter::{
 use icu::experimental::dimension::percent::options::PercentFormatterOptions;
 use icu_provider::buf::AsDeserializingBufferProvider;
 use icu4x_macros::RubySymbol;
-use magnus::{
-    Error, RHash, RModule, Ruby, TryConvert, Value, function, method, prelude::*,
-};
+use magnus::{Error, RArray, RHash, RModule, Ruby, TryConvert, Value, function, method, prelude::*};
 use tinystr::TinyAsciiStr;
+use writeable::{Part, Writeable};
 
 /// The style of number formatting
 #[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
@@ -67,6 +68,29 @@ enum FormatterKind {
     Decimal(DecimalFormatter),
     Percent(PercentFormatter<DecimalFormatter>),
     Currency(CurrencyFormatter, CurrencyCode),
+}
+
+/// Convert ICU4X decimal Part to Ruby symbol name
+fn part_to_symbol_name(part: &Part) -> &'static str {
+    if *part == decimal_parts::INTEGER {
+        "integer"
+    } else if *part == decimal_parts::FRACTION {
+        "fraction"
+    } else if *part == decimal_parts::DECIMAL {
+        "decimal"
+    } else if *part == decimal_parts::GROUP {
+        "group"
+    } else if *part == decimal_parts::MINUS_SIGN {
+        "minus_sign"
+    } else if *part == decimal_parts::PLUS_SIGN {
+        "plus_sign"
+    } else if part.category == "currency" {
+        "currency"
+    } else if part.category == "percent" {
+        "percent_sign"
+    } else {
+        "literal"
+    }
 }
 
 /// Ruby wrapper for ICU4X number formatters
@@ -268,8 +292,59 @@ impl NumberFormat {
     /// A formatted string
     fn format(&self, number: Value) -> Result<String, Error> {
         let ruby = Ruby::get().expect("Ruby runtime should be available");
+        let decimal = self.prepare_decimal(&ruby, number)?;
 
-        let mut decimal = Self::convert_to_decimal(&ruby, number)?;
+        let formatted = match &self.inner {
+            FormatterKind::Decimal(formatter) => formatter.format(&decimal).to_string(),
+            FormatterKind::Percent(formatter) => formatter.format(&decimal).to_string(),
+            FormatterKind::Currency(formatter, currency_code) => formatter
+                .format_fixed_decimal(&decimal, *currency_code)
+                .to_string(),
+        };
+        Ok(formatted)
+    }
+
+    /// Format a number and return an array of FormattedPart
+    ///
+    /// # Arguments
+    /// * `number` - An integer, float, or BigDecimal
+    ///
+    /// # Returns
+    /// An array of FormattedPart objects with :type and :value
+    fn format_to_parts(&self, number: Value) -> Result<RArray, Error> {
+        let ruby = Ruby::get().expect("Ruby runtime should be available");
+        let decimal = self.prepare_decimal(&ruby, number)?;
+
+        let mut collector = PartsCollector::new();
+        match &self.inner {
+            FormatterKind::Decimal(formatter) => {
+                formatter
+                    .format(&decimal)
+                    .write_to_parts(&mut collector)
+                    .map_err(|e| Error::new(ruby.exception_runtime_error(), format!("{}", e)))?;
+            }
+            FormatterKind::Percent(formatter) => {
+                formatter
+                    .format(&decimal)
+                    .write_to_parts(&mut collector)
+                    .map_err(|e| Error::new(ruby.exception_runtime_error(), format!("{}", e)))?;
+            }
+            FormatterKind::Currency(formatter, currency_code) => {
+                formatter
+                    .format_fixed_decimal(&decimal, *currency_code)
+                    .write_to_parts(&mut collector)
+                    .map_err(|e| Error::new(ruby.exception_runtime_error(), format!("{}", e)))?;
+            }
+        }
+
+        parts_to_ruby_array(&ruby, collector, part_to_symbol_name)
+    }
+
+    /// Prepare a Ruby number for formatting.
+    ///
+    /// Converts to Decimal, adjusts for percent style, and applies digit options.
+    fn prepare_decimal(&self, ruby: &Ruby, number: Value) -> Result<Decimal, Error> {
+        let mut decimal = Self::convert_to_decimal(ruby, number)?;
 
         // For percent style, multiply by 100 (same as Intl.NumberFormat)
         if self.style == Style::Percent {
@@ -288,14 +363,7 @@ impl NumberFormat {
             decimal.pad_start(min);
         }
 
-        let formatted = match &self.inner {
-            FormatterKind::Decimal(formatter) => formatter.format(&decimal).to_string(),
-            FormatterKind::Percent(formatter) => formatter.format(&decimal).to_string(),
-            FormatterKind::Currency(formatter, currency_code) => formatter
-                .format_fixed_decimal(&decimal, *currency_code)
-                .to_string(),
-        };
-        Ok(formatted)
+        Ok(decimal)
     }
 
     /// Convert Ruby number to Decimal
@@ -382,6 +450,10 @@ pub fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
     let class = module.define_class("NumberFormat", ruby.class_object())?;
     class.define_singleton_method("new", function!(NumberFormat::new, -1))?;
     class.define_method("format", method!(NumberFormat::format, 1))?;
+    class.define_method(
+        "format_to_parts",
+        method!(NumberFormat::format_to_parts, 1),
+    )?;
     class.define_method(
         "resolved_options",
         method!(NumberFormat::resolved_options, 0),

@@ -183,6 +183,70 @@ RSpec.describe ICU4X::ListFormat do
     end
   end
 
+  describe "#format_to_parts" do
+    let(:provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
+    let(:locale) { ICU4X::Locale.parse("en") }
+    let(:lf) { ICU4X::ListFormat.new(locale, provider:) }
+
+    it "returns an array of FormattedPart" do
+      parts = lf.format_to_parts(%w[Apple Banana Cherry])
+
+      expect(parts).to all(be_a(ICU4X::FormattedPart))
+    end
+
+    it "returns element and literal parts for three items" do
+      parts = lf.format_to_parts(%w[Apple Banana Cherry])
+
+      expect(parts.map(&:type)).to eq(%i[element literal element literal element])
+      expect(parts.map(&:value)).to eq(["Apple", ", ", "Banana", ", and ", "Cherry"])
+    end
+
+    it "returns element parts only for single item" do
+      parts = lf.format_to_parts(["Apple"])
+
+      expect(parts.map(&:type)).to eq([:element])
+      expect(parts.map(&:value)).to eq(["Apple"])
+    end
+
+    it "returns element and literal parts for two items" do
+      parts = lf.format_to_parts(%w[Apple Banana])
+
+      expect(parts.map(&:type)).to eq(%i[element literal element])
+      expect(parts.map(&:value)).to eq(["Apple", " and ", "Banana"])
+    end
+
+    it "returns empty array for empty list" do
+      parts = lf.format_to_parts([])
+
+      expect(parts).to eq([])
+    end
+
+    it "can reconstruct formatted string from parts" do
+      items = %w[Apple Banana Cherry]
+      parts = lf.format_to_parts(items)
+
+      expect(parts.map(&:value).join).to eq(lf.format(items))
+    end
+
+    context "with Japanese locale" do
+      let(:locale) { ICU4X::Locale.parse("ja") }
+      let(:lf) { ICU4X::ListFormat.new(locale, provider:) }
+
+      it "returns Japanese separators as literals" do
+        parts = lf.format_to_parts(%w[リンゴ バナナ チェリー])
+
+        expect(parts.map(&:type)).to eq(%i[element literal element literal element])
+        expect(parts.map(&:value)).to eq(["リンゴ", "、", "バナナ", "、", "チェリー"])
+      end
+    end
+
+    context "with invalid input" do
+      it "raises TypeError for non-array input" do
+        expect { lf.format_to_parts("not an array") }.to raise_error(TypeError, /list must be an Array/)
+      end
+    end
+  end
+
   describe "#resolved_options" do
     let(:provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
 

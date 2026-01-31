@@ -1,5 +1,6 @@
 use crate::data_provider::DataProvider;
 use crate::helpers;
+use crate::parts_collector::{PartsCollector, parts_to_ruby_array};
 use icu::calendar::preferences::CalendarAlgorithm;
 use icu::calendar::{AnyCalendarKind, Date, Gregorian};
 use icu::datetime::fieldsets::enums::{
@@ -7,6 +8,7 @@ use icu::datetime::fieldsets::enums::{
 };
 use icu::datetime::fieldsets::{self};
 use icu::datetime::input::DateTime;
+use icu::datetime::parts as dt_parts;
 use icu::datetime::{DateTimeFormatter, DateTimeFormatterPreferences};
 use icu::time::Time;
 use icu::time::zone::IanaParser;
@@ -14,9 +16,8 @@ use icu_provider::buf::AsDeserializingBufferProvider;
 use icu4x_macros::RubySymbol;
 use jiff::Timestamp;
 use jiff::tz::TimeZone;
-use magnus::{
-    Error, RHash, RModule, Ruby, TryConvert, Value, function, method, prelude::*,
-};
+use magnus::{Error, RArray, RHash, RModule, Ruby, TryConvert, Value, function, method, prelude::*};
+use writeable::{Part, Writeable};
 
 /// Date style option
 #[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
@@ -91,6 +92,33 @@ impl Calendar {
             AnyCalendarKind::Roc => Calendar::Roc,
             _ => Calendar::Gregory,
         }
+    }
+}
+
+/// Convert ICU4X datetime Part to Ruby symbol name
+fn part_to_symbol_name(part: &Part) -> &'static str {
+    if *part == dt_parts::YEAR {
+        "year"
+    } else if *part == dt_parts::MONTH {
+        "month"
+    } else if *part == dt_parts::DAY {
+        "day"
+    } else if *part == dt_parts::WEEKDAY {
+        "weekday"
+    } else if *part == dt_parts::HOUR {
+        "hour"
+    } else if *part == dt_parts::MINUTE {
+        "minute"
+    } else if *part == dt_parts::SECOND {
+        "second"
+    } else if *part == dt_parts::DAY_PERIOD {
+        "day_period"
+    } else if *part == dt_parts::ERA {
+        "era"
+    } else if *part == dt_parts::TIME_ZONE_NAME {
+        "time_zone_name"
+    } else {
+        "literal"
     }
 }
 
@@ -284,7 +312,36 @@ impl DateTimeFormat {
     /// A formatted string
     fn format(&self, time: Value) -> Result<String, Error> {
         let ruby = Ruby::get().expect("Ruby runtime should be available");
+        let datetime = self.prepare_datetime(&ruby, time)?;
+        let formatted = self.inner.format(&datetime);
+        Ok(formatted.to_string())
+    }
 
+    /// Format a Ruby Time object and return an array of FormattedPart
+    ///
+    /// # Arguments
+    /// * `time` - A Ruby Time object or an object responding to #to_time (e.g., Date, DateTime)
+    ///
+    /// # Returns
+    /// An array of FormattedPart objects with :type and :value
+    fn format_to_parts(&self, time: Value) -> Result<RArray, Error> {
+        let ruby = Ruby::get().expect("Ruby runtime should be available");
+        let datetime = self.prepare_datetime(&ruby, time)?;
+
+        let formatted = self.inner.format(&datetime);
+        let mut collector = PartsCollector::new();
+        formatted
+            .write_to_parts(&mut collector)
+            .map_err(|e| Error::new(ruby.exception_runtime_error(), format!("{}", e)))?;
+
+        parts_to_ruby_array(&ruby, collector, part_to_symbol_name)
+    }
+
+    /// Prepare a Ruby Time value for formatting.
+    ///
+    /// Converts objects responding to #to_time, validates the result,
+    /// and converts to ICU4X DateTime.
+    fn prepare_datetime(&self, ruby: &Ruby, time: Value) -> Result<DateTime<Gregorian>, Error> {
         // Convert to Time if the object responds to #to_time
         let time_value = if time.respond_to("to_time", false)? {
             time.funcall::<_, _, Value>("to_time", ())?
@@ -301,12 +358,7 @@ impl DateTimeFormat {
             ));
         }
 
-        // Convert Ruby Time to ICU4X DateTime, applying timezone if specified
-        let datetime = self.convert_time_to_datetime(&ruby, time_value)?;
-
-        // Format the datetime
-        let formatted = self.inner.format(&datetime);
-        Ok(formatted.to_string())
+        self.convert_time_to_datetime(ruby, time_value)
     }
 
     /// Convert Ruby Time to ICU4X DateTime<Gregorian>
@@ -411,6 +463,10 @@ pub fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
     let class = module.define_class("DateTimeFormat", ruby.class_object())?;
     class.define_singleton_method("new", function!(DateTimeFormat::new, -1))?;
     class.define_method("format", method!(DateTimeFormat::format, 1))?;
+    class.define_method(
+        "format_to_parts",
+        method!(DateTimeFormat::format_to_parts, 1),
+    )?;
     class.define_method(
         "resolved_options",
         method!(DateTimeFormat::resolved_options, 0),

@@ -37,6 +37,12 @@ module ICU4X
     # @raise [TypeError] If list is not an Array
     def format(list) = ...
 
+    # Format a list and return an array of parts
+    # @param list [Array<String>] Array of strings to format
+    # @return [Array<FormattedPart>]
+    # @raise [TypeError] If list is not an Array
+    def format_to_parts(list) = ...
+
     # Get resolved options
     # @return [Hash]
     def resolved_options = ...
@@ -126,6 +132,36 @@ lf_short.format(["A", "B", "C"])
 lf_narrow = ICU4X::ListFormat.new(locale, provider: provider, style: :narrow)
 lf_narrow.format(["A", "B", "C"])
 # => "A, B, C"
+```
+
+---
+
+## format_to_parts
+
+Break down formatted output into typed parts. Useful for custom styling or processing of individual components.
+
+### Part Types
+
+| Type | Description | Example |
+|------|-------------|---------|
+| `:element` | A list element | "Apple" |
+| `:literal` | Separator or conjunction | ", " or ", and " |
+
+### Example
+
+```ruby
+lf = ICU4X::ListFormat.new(locale, provider: provider)
+parts = lf.format_to_parts(["Apple", "Banana", "Cherry"])
+# => [
+#   #<ICU4X::FormattedPart type=:element value="Apple">,
+#   #<ICU4X::FormattedPart type=:literal value=", ">,
+#   #<ICU4X::FormattedPart type=:element value="Banana">,
+#   #<ICU4X::FormattedPart type=:literal value=", and ">,
+#   #<ICU4X::FormattedPart type=:element value="Cherry">
+# ]
+
+# Reconstruct the formatted string
+parts.map(&:value).join  # => "Apple, Banana, and Cherry"
 ```
 
 ---

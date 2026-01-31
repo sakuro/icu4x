@@ -1,12 +1,13 @@
 use crate::data_provider::DataProvider;
 use crate::helpers;
+use crate::parts_collector::{PartsCollector, parts_to_ruby_array};
+use icu::list::parts as list_parts;
 use icu::list::ListFormatter;
 use icu::list::options::{ListFormatterOptions, ListLength};
 use icu_provider::buf::AsDeserializingBufferProvider;
 use icu4x_macros::RubySymbol;
-use magnus::{
-    Error, RArray, RHash, RModule, Ruby, TryConvert, Value, function, method, prelude::*,
-};
+use magnus::{Error, RArray, RHash, RModule, Ruby, TryConvert, Value, function, method, prelude::*};
+use writeable::{Part, Writeable};
 
 /// The type of list formatting
 #[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
@@ -31,6 +32,17 @@ impl ListStyle {
             ListStyle::Short => ListLength::Short,
             ListStyle::Narrow => ListLength::Narrow,
         }
+    }
+}
+
+/// Convert ICU4X list Part to Ruby symbol name
+fn part_to_symbol_name(part: &Part) -> &'static str {
+    if *part == list_parts::ELEMENT {
+        "element"
+    } else if *part == list_parts::LITERAL {
+        "literal"
+    } else {
+        "literal"
     }
 }
 
@@ -134,18 +146,42 @@ impl ListFormat {
     /// A formatted string
     fn format(&self, list: Value) -> Result<String, Error> {
         let ruby = Ruby::get().expect("Ruby runtime should be available");
+        let items = self.prepare_list(&ruby, list)?;
+        let formatted = self.inner.format(items.iter().map(|s| s.as_str()));
+        Ok(formatted.to_string())
+    }
 
-        // Convert Ruby Array to Vec<String>
+    /// Format a list of strings and return an array of FormattedPart
+    ///
+    /// # Arguments
+    /// * `list` - An array of strings
+    ///
+    /// # Returns
+    /// An array of FormattedPart objects with :type and :value
+    fn format_to_parts(&self, list: Value) -> Result<RArray, Error> {
+        let ruby = Ruby::get().expect("Ruby runtime should be available");
+        let items = self.prepare_list(&ruby, list)?;
+
+        let formatted = self.inner.format(items.iter().map(|s| s.as_str()));
+        let mut collector = PartsCollector::new();
+        formatted
+            .write_to_parts(&mut collector)
+            .map_err(|e| Error::new(ruby.exception_runtime_error(), format!("{}", e)))?;
+
+        parts_to_ruby_array(&ruby, collector, part_to_symbol_name)
+    }
+
+    /// Prepare a Ruby list for formatting.
+    ///
+    /// Converts Ruby Array to Vec<String>.
+    fn prepare_list(&self, ruby: &Ruby, list: Value) -> Result<Vec<String>, Error> {
         let array: RArray = TryConvert::try_convert(list)
             .map_err(|_| Error::new(ruby.exception_type_error(), "list must be an Array"))?;
 
-        let items: Vec<String> = array
+        array
             .into_iter()
             .map(TryConvert::try_convert)
-            .collect::<Result<Vec<_>, _>>()?;
-
-        let formatted = self.inner.format(items.iter().map(|s| s.as_str()));
-        Ok(formatted.to_string())
+            .collect::<Result<Vec<_>, _>>()
     }
 
     /// Get the resolved options
@@ -172,6 +208,7 @@ pub fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
     let class = module.define_class("ListFormat", ruby.class_object())?;
     class.define_singleton_method("new", function!(ListFormat::new, -1))?;
     class.define_method("format", method!(ListFormat::format, 1))?;
+    class.define_method("format_to_parts", method!(ListFormat::format_to_parts, 1))?;
     class.define_method("resolved_options", method!(ListFormat::resolved_options, 0))?;
     Ok(())
 }

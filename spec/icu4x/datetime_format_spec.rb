@@ -254,6 +254,97 @@ RSpec.describe ICU4X::DateTimeFormat do
     end
   end
 
+  describe "#format_to_parts" do
+    context "with en-US locale and date_style" do
+      let(:locale) { ICU4X::Locale.parse("en-US") }
+      let(:formatter) { ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long) }
+      let(:time) { Time.utc(2025, 1, 31, 15, 30, 45) }
+
+      it "returns an array of FormattedPart objects" do
+        parts = formatter.format_to_parts(time)
+
+        expect(parts).to be_an(Array)
+        expect(parts).to all(be_a(ICU4X::FormattedPart))
+      end
+
+      it "includes month, day, and year parts" do
+        parts = formatter.format_to_parts(time)
+        types = parts.map(&:type)
+
+        expect(types).to include(:month, :day, :year)
+      end
+
+      it "includes literal separators" do
+        parts = formatter.format_to_parts(time)
+        literals = parts.select {|p| p.type == :literal }
+
+        expect(literals).not_to be_empty
+      end
+
+      it "reconstructs the formatted string when joined" do
+        parts = formatter.format_to_parts(time)
+        joined = parts.map(&:value).join
+
+        expect(joined).to eq(formatter.format(time))
+      end
+    end
+
+    context "with date and time styles" do
+      let(:locale) { ICU4X::Locale.parse("en-US") }
+      let(:formatter) { ICU4X::DateTimeFormat.new(locale, provider:, date_style: :medium, time_style: :medium) }
+      let(:time) { Time.utc(2025, 1, 31, 15, 30, 45) }
+
+      it "includes hour, minute, second, and day_period parts" do
+        parts = formatter.format_to_parts(time)
+        types = parts.map(&:type)
+
+        expect(types).to include(:hour, :minute, :second, :day_period)
+      end
+    end
+
+    context "with Japanese calendar" do
+      let(:locale) { ICU4X::Locale.parse("ja-JP") }
+      let(:formatter) { ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, calendar: :japanese) }
+      let(:time) { Time.utc(2025, 1, 31) }
+
+      it "includes era part" do
+        parts = formatter.format_to_parts(time)
+        types = parts.map(&:type)
+
+        expect(types).to include(:era)
+      end
+
+      it "has era value of 令和" do
+        parts = formatter.format_to_parts(time)
+        era_part = parts.find {|p| p.type == :era }
+
+        expect(era_part.value).to eq("令和")
+      end
+    end
+
+    context "with Date object" do
+      let(:locale) { ICU4X::Locale.parse("en-US") }
+      let(:formatter) { ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, time_zone: "Asia/Tokyo") }
+
+      it "formats Date by calling #to_time" do
+        parts = formatter.format_to_parts(Date.new(2025, 12, 28))
+        joined = parts.map(&:value).join
+
+        expect(joined).to eq("December 28, 2025")
+      end
+    end
+
+    context "with invalid argument" do
+      let(:locale) { ICU4X::Locale.parse("en-US") }
+      let(:formatter) { ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long) }
+
+      it "raises TypeError when argument does not respond to #to_time" do
+        expect { formatter.format_to_parts("2025-12-28") }
+          .to raise_error(TypeError, /argument must be a Time object or respond to #to_time/)
+      end
+    end
+  end
+
   describe "#resolved_options" do
     let(:locale) { ICU4X::Locale.parse("en-US") }
 
