@@ -84,6 +84,7 @@ module ICU4X
     ) -> NumberFormat
 
     def format: (Integer | Float | BigDecimal number) -> String
+    def format_to_parts: (Integer | Float | BigDecimal number) -> Array[FormattedPart]
     def resolved_options: () -> {
       locale: String,
       style: number_format_style,
