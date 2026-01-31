@@ -10,6 +10,7 @@ use icu::datetime::fieldsets::{self};
 use icu::datetime::input::DateTime;
 use icu::datetime::parts as dt_parts;
 use icu::datetime::{DateTimeFormatter, DateTimeFormatterPreferences};
+use icu::locale::preferences::extensions::unicode::keywords::HourCycle as IcuHourCycle;
 use icu::time::Time;
 use icu::time::zone::IanaParser;
 use icu_provider::buf::AsDeserializingBufferProvider;
@@ -35,6 +36,24 @@ enum TimeStyle {
     Long,
     Medium,
     Short,
+}
+
+/// Hour cycle option
+#[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
+enum HourCycle {
+    H11,
+    H12,
+    H23,
+}
+
+impl HourCycle {
+    fn to_icu_hour_cycle(self) -> IcuHourCycle {
+        match self {
+            HourCycle::H11 => IcuHourCycle::H11,
+            HourCycle::H12 => IcuHourCycle::H12,
+            HourCycle::H23 => IcuHourCycle::H23,
+        }
+    }
 }
 
 /// Calendar option
@@ -132,6 +151,7 @@ pub struct DateTimeFormat {
     time_zone: Option<String>,
     jiff_timezone: Option<TimeZone>,
     calendar: Calendar,
+    hour_cycle: Option<HourCycle>,
 }
 
 // SAFETY: This type is marked as Send to allow Ruby to move it between threads.
@@ -159,6 +179,7 @@ impl DateTimeFormat {
     /// * `time_zone:` - IANA timezone name (e.g., "Asia/Tokyo")
     /// * `calendar:` - :gregory, :japanese, :buddhist, :chinese, :hebrew, :islamic,
     ///   :persian, :indian, :ethiopian, :coptic, :roc, :dangi
+    /// * `hour_cycle:` - :h11, :h12, or :h23
     fn new(ruby: &Ruby, args: &[Value]) -> Result<Self, Error> {
         // Parse arguments: (locale, **kwargs)
         let (icu_locale, locale_str) = helpers::extract_locale(ruby, args)?;
@@ -220,6 +241,10 @@ impl DateTimeFormat {
         let calendar =
             helpers::extract_symbol(ruby, &kwargs, "calendar", Calendar::from_ruby_symbol)?;
 
+        // Extract hour_cycle option
+        let hour_cycle =
+            helpers::extract_symbol(ruby, &kwargs, "hour_cycle", HourCycle::from_ruby_symbol)?;
+
         // Get the error exception class
         let error_class = helpers::get_exception_class(ruby, "ICU4X::Error");
 
@@ -234,10 +259,13 @@ impl DateTimeFormat {
         // Create field set based on date_style and time_style
         let field_set = Self::create_field_set(date_style, time_style);
 
-        // Create formatter with calendar preference
+        // Create formatter with calendar and hour_cycle preferences
         let mut prefs: DateTimeFormatterPreferences = (&icu_locale).into();
         if let Some(cal) = calendar {
             prefs.calendar_algorithm = Some(cal.to_calendar_algorithm());
+        }
+        if let Some(hc) = hour_cycle {
+            prefs.hour_cycle = Some(hc.to_icu_hour_cycle());
         }
 
         let formatter =
@@ -260,6 +288,7 @@ impl DateTimeFormat {
             time_zone,
             jiff_timezone,
             calendar: resolved_calendar,
+            hour_cycle,
         })
     }
 
@@ -426,7 +455,7 @@ impl DateTimeFormat {
     /// Get the resolved options
     ///
     /// # Returns
-    /// A hash with :locale, :calendar, :date_style, :time_style, and optionally :time_zone
+    /// A hash with :locale, :calendar, :date_style, :time_style, and optionally :time_zone, :hour_cycle
     fn resolved_options(&self) -> Result<RHash, Error> {
         let ruby = Ruby::get().expect("Ruby runtime should be available");
         let hash = ruby.hash_new();
@@ -453,6 +482,13 @@ impl DateTimeFormat {
 
         if let Some(ref tz) = self.time_zone {
             hash.aset(ruby.to_symbol("time_zone"), tz.as_str())?;
+        }
+
+        if let Some(hc) = self.hour_cycle {
+            hash.aset(
+                ruby.to_symbol("hour_cycle"),
+                ruby.to_symbol(hc.to_symbol_name()),
+            )?;
         }
 
         Ok(hash)

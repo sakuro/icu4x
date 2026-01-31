@@ -69,6 +69,7 @@ module ICU4X
   type date_style = :full | :long | :medium | :short
   type time_style = :full | :long | :medium | :short
   type datetime_calendar = :gregory | :japanese | :buddhist | :chinese | :hebrew | :islamic | :persian | :indian | :ethiopian | :coptic | :roc | :dangi
+  type hour_cycle = :h11 | :h12 | :h23
 
   class NumberFormat
     def self.new: (
@@ -104,7 +105,8 @@ module ICU4X
       ?date_style: date_style,
       ?time_style: time_style,
       ?time_zone: String,
-      ?calendar: datetime_calendar
+      ?calendar: datetime_calendar,
+      ?hour_cycle: hour_cycle
     ) -> DateTimeFormat
 
     def format: (Time time) -> String
@@ -114,7 +116,8 @@ module ICU4X
       calendar: datetime_calendar,
       ?date_style: date_style,
       ?time_style: time_style,
-      ?time_zone: String
+      ?time_zone: String,
+      ?hour_cycle: hour_cycle
     }
   end
 
