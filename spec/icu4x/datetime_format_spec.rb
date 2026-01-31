@@ -86,6 +86,31 @@ RSpec.describe ICU4X::DateTimeFormat do
         expect { ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, time_zone: "Invalid/Timezone") }
           .to raise_error(ArgumentError, /invalid IANA timezone/)
       end
+
+      it "raises ArgumentError when hour_cycle is invalid" do
+        expect { ICU4X::DateTimeFormat.new(locale, provider:, time_style: :short, hour_cycle: :h24) }
+          .to raise_error(ArgumentError, /hour_cycle must be :h11, :h12, :h23/)
+      end
+    end
+
+    context "with hour_cycle option" do
+      it "creates a DateTimeFormat instance with hour_cycle: :h12" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :short, hour_cycle: :h12)
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+      end
+
+      it "creates a DateTimeFormat instance with hour_cycle: :h23" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :short, hour_cycle: :h23)
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+      end
+
+      it "creates a DateTimeFormat instance with hour_cycle: :h11" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :short, hour_cycle: :h11)
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+      end
     end
 
     context "with valid time_zone" do
@@ -209,6 +234,52 @@ RSpec.describe ICU4X::DateTimeFormat do
       it "raises TypeError when argument does not respond to #to_time" do
         expect { formatter.format("2025-12-28") }
           .to raise_error(TypeError, /argument must be a Time object or respond to #to_time/)
+      end
+    end
+
+    context "with hour_cycle option" do
+      let(:locale) { ICU4X::Locale.parse("en-US") }
+      let(:midnight) { Time.utc(2025, 12, 28, 0, 30, 0) }
+      let(:noon) { Time.utc(2025, 12, 28, 12, 30, 0) }
+
+      it "formats midnight with h12 as 12:30 AM" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :short, hour_cycle: :h12)
+
+        result = formatter.format(midnight)
+
+        expect(result).to eq("12:30:00\u202FAM")
+      end
+
+      it "formats midnight with h23 as 00:30" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :short, hour_cycle: :h23)
+
+        result = formatter.format(midnight)
+
+        expect(result).to eq("00:30:00")
+      end
+
+      it "formats midnight with h11 as 0:30 AM" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :short, hour_cycle: :h11)
+
+        result = formatter.format(midnight)
+
+        expect(result).to eq("0:30:00\u202FAM")
+      end
+
+      it "formats noon with h12 as 12:30 PM" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :short, hour_cycle: :h12)
+
+        result = formatter.format(noon)
+
+        expect(result).to eq("12:30:00\u202FPM")
+      end
+
+      it "formats noon with h23 as 12:30" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :short, hour_cycle: :h23)
+
+        result = formatter.format(noon)
+
+        expect(result).to eq("12:30:00")
       end
     end
 
@@ -388,6 +459,18 @@ RSpec.describe ICU4X::DateTimeFormat do
       formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, calendar: :japanese)
 
       expect(formatter.resolved_options).to include(calendar: :japanese)
+    end
+
+    it "returns hour_cycle when specified" do
+      formatter = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :short, hour_cycle: :h23)
+
+      expect(formatter.resolved_options).to include(hour_cycle: :h23)
+    end
+
+    it "does not return hour_cycle when not specified" do
+      formatter = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :short)
+
+      expect(formatter.resolved_options).not_to have_key(:hour_cycle)
     end
   end
 

@@ -2,6 +2,7 @@
 
 ### Added
 
+- `hour_cycle` option for `ICU4X::DateTimeFormat` to control 12/24-hour time display (#112)
 - `ICU4X::RelativeTimeFormat#format_to_parts` method for breaking down formatted output into typed parts (#117)
 - `ICU4X::ListFormat#format_to_parts` method for breaking down formatted output into typed parts (#116)
 - `ICU4X::NumberFormat#format_to_parts` method for breaking down formatted output into typed parts (#115)

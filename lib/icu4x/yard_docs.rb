@@ -545,14 +545,19 @@
 #       # @param time_style [Symbol, nil] time format style: `:full`, `:long`, `:medium`, or `:short`
 #       # @param time_zone [String, nil] IANA time zone identifier (e.g., "America/New_York")
 #       # @param calendar [Symbol] calendar system to use
+#       # @param hour_cycle [Symbol, nil] hour cycle: `:h11` (0-11), `:h12` (1-12), or `:h23` (0-23)
 #       # @return [DateTimeFormat] a new instance
 #       # @raise [DataError] if data for the locale is unavailable
 #       #
-#       # @example
+#       # @example Basic usage
 #       #   formatter = ICU4X::DateTimeFormat.new(locale, date_style: :long, time_style: :short)
 #       #
+#       # @example With 24-hour format
+#       #   formatter = ICU4X::DateTimeFormat.new(locale, time_style: :short, hour_cycle: :h23)
+#       #   formatter.format(Time.utc(2025, 1, 1, 0, 30))  #=> "00:30:00"
+#       #
 #       def initialize(locale, provider: nil, date_style: nil, time_style: nil,
-#                      time_zone: nil, calendar: :gregory); end
+#                      time_zone: nil, calendar: :gregory, hour_cycle: nil); end
 #
 #       # Formats a time value according to the configured options.
 #       #
@@ -598,6 +603,7 @@
 #       #   - `:date_style` [Symbol] the date style (if set)
 #       #   - `:time_style` [Symbol] the time style (if set)
 #       #   - `:time_zone` [String] the time zone (if set)
+#       #   - `:hour_cycle` [Symbol] the hour cycle (if set)
 #       #
 #       def resolved_options; end
 #     end

@@ -29,8 +29,9 @@ module ICU4X
     # @param time_style [Symbol, nil] :full, :long, :medium, :short
     # @param time_zone [String, nil] IANA timezone name (e.g., "Asia/Tokyo")
     # @param calendar [Symbol] :gregory, :japanese, :buddhist, :chinese, :hebrew, :islamic, :persian, :indian, :ethiopian, :coptic, :roc, :dangi
+    # @param hour_cycle [Symbol, nil] :h11 (0-11), :h12 (1-12), :h23 (0-23)
     # @raise [Error] If options are invalid
-    def initialize(locale, provider:, date_style: nil, time_style: nil, time_zone: nil, calendar: nil) = ...
+    def initialize(locale, provider:, date_style: nil, time_style: nil, time_zone: nil, calendar: nil, hour_cycle: nil) = ...
 
     # Format a time
     # @param time [Time, #to_time] Time to format (or any object responding to #to_time)
@@ -97,6 +98,28 @@ Specify the calendar system to use for formatting.
 | `:dangi` | Korean traditional calendar |
 
 If not specified, defaults based on locale preferences.
+
+#### hour_cycle
+
+Control 12-hour vs 24-hour time display format.
+
+| Value | Range | Midnight | Noon | Usage |
+|-------|-------|----------|------|-------|
+| `:h12` | 1-12 | 12:00 AM | 12:00 PM | US, etc. |
+| `:h11` | 0-11 | 0:00 AM | 0:00 PM | Some Japanese systems |
+| `:h23` | 0-23 | 00:00 | 12:00 | Europe, Japan, etc. |
+
+NOTE: `:h24` (1-24) is not supported as ICU4X does not implement this hour cycle.
+
+```ruby
+dtf = ICU4X::DateTimeFormat.new(
+  locale,
+  provider: provider,
+  time_style: :short,
+  hour_cycle: :h23
+)
+dtf.format(Time.utc(2025, 1, 1, 0, 30))  # => "00:30:00"
+```
 
 ---
 
