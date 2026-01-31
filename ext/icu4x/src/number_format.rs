@@ -292,25 +292,7 @@ impl NumberFormat {
     /// A formatted string
     fn format(&self, number: Value) -> Result<String, Error> {
         let ruby = Ruby::get().expect("Ruby runtime should be available");
-
-        let mut decimal = Self::convert_to_decimal(&ruby, number)?;
-
-        // For percent style, multiply by 100 (same as Intl.NumberFormat)
-        if self.style == Style::Percent {
-            decimal.multiply_pow10(2);
-            decimal.trim_start();
-        }
-
-        // Apply digit options (order matters: round first, then pad)
-        if let Some(max) = self.maximum_fraction_digits {
-            decimal.round_with_mode(-max, self.rounding_mode.to_signed_rounding_mode());
-        }
-        if let Some(min) = self.minimum_fraction_digits {
-            decimal.pad_end(-min);
-        }
-        if let Some(min) = self.minimum_integer_digits {
-            decimal.pad_start(min);
-        }
+        let decimal = self.prepare_decimal(&ruby, number)?;
 
         let formatted = match &self.inner {
             FormatterKind::Decimal(formatter) => formatter.format(&decimal).to_string(),
@@ -331,27 +313,8 @@ impl NumberFormat {
     /// An array of FormattedPart objects with :type and :value
     fn format_to_parts(&self, number: Value) -> Result<RArray, Error> {
         let ruby = Ruby::get().expect("Ruby runtime should be available");
+        let decimal = self.prepare_decimal(&ruby, number)?;
 
-        let mut decimal = Self::convert_to_decimal(&ruby, number)?;
-
-        // For percent style, multiply by 100 (same as Intl.NumberFormat)
-        if self.style == Style::Percent {
-            decimal.multiply_pow10(2);
-            decimal.trim_start();
-        }
-
-        // Apply digit options (order matters: round first, then pad)
-        if let Some(max) = self.maximum_fraction_digits {
-            decimal.round_with_mode(-max, self.rounding_mode.to_signed_rounding_mode());
-        }
-        if let Some(min) = self.minimum_fraction_digits {
-            decimal.pad_end(-min);
-        }
-        if let Some(min) = self.minimum_integer_digits {
-            decimal.pad_start(min);
-        }
-
-        // Format and collect parts
         let mut collector = PartsCollector::new();
         match &self.inner {
             FormatterKind::Decimal(formatter) => {
@@ -375,6 +338,32 @@ impl NumberFormat {
         }
 
         parts_to_ruby_array(&ruby, collector, part_to_symbol_name)
+    }
+
+    /// Prepare a Ruby number for formatting.
+    ///
+    /// Converts to Decimal, adjusts for percent style, and applies digit options.
+    fn prepare_decimal(&self, ruby: &Ruby, number: Value) -> Result<Decimal, Error> {
+        let mut decimal = Self::convert_to_decimal(ruby, number)?;
+
+        // For percent style, multiply by 100 (same as Intl.NumberFormat)
+        if self.style == Style::Percent {
+            decimal.multiply_pow10(2);
+            decimal.trim_start();
+        }
+
+        // Apply digit options (order matters: round first, then pad)
+        if let Some(max) = self.maximum_fraction_digits {
+            decimal.round_with_mode(-max, self.rounding_mode.to_signed_rounding_mode());
+        }
+        if let Some(min) = self.minimum_fraction_digits {
+            decimal.pad_end(-min);
+        }
+        if let Some(min) = self.minimum_integer_digits {
+            decimal.pad_start(min);
+        }
+
+        Ok(decimal)
     }
 
     /// Convert Ruby number to Decimal
