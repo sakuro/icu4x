@@ -185,6 +185,51 @@ nf.format(BigDecimal("12345678901234567890.123456789"))
 
 ---
 
+## Numbering System
+
+Specify a numbering system using BCP 47 locale extensions (`-u-nu-xxx`).
+
+### Available Numbering Systems
+
+| Code | Name | Example |
+|------|------|---------|
+| `latn` | Latin (default) | 0, 1, 2, 3 |
+| `arab` | Arabic-Indic | ٠, ١, ٢, ٣ |
+| `hanidec` | Han decimal | 〇, 一, 二, 三 |
+| `thai` | Thai | ๐, ๑, ๒, ๓ |
+| `deva` | Devanagari | ०, १, २, ३ |
+| `jpan` | Japanese | Not supported |
+
+### Examples
+
+```ruby
+# Han decimal numerals (Chinese/Japanese)
+locale = ICU4X::Locale.parse("ja-JP-u-nu-hanidec")
+nf = ICU4X::NumberFormat.new(locale, provider: provider)
+nf.format(1234)
+# => "一,二三四"
+
+# Arabic-Indic numerals
+locale = ICU4X::Locale.parse("ar-EG-u-nu-arab")
+nf = ICU4X::NumberFormat.new(locale, provider: provider)
+nf.format(1234)
+# => "١٬٢٣٤"
+
+# Override default to Latin numerals
+locale = ICU4X::Locale.parse("ar-EG-u-nu-latn")
+nf = ICU4X::NumberFormat.new(locale, provider: provider)
+nf.format(1234)
+# => "1,234"
+
+# Thai numerals
+locale = ICU4X::Locale.parse("th-TH-u-nu-thai")
+nf = ICU4X::NumberFormat.new(locale, provider: provider)
+nf.format(1234)
+# => "๑,๒๓๔"
+```
+
+---
+
 ## Numeric Type Conversion
 
 ### Supported Ruby Types

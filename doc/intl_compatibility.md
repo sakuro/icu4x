@@ -36,7 +36,16 @@ This document tracks which JavaScript Intl API options are supported in ICU4X Ru
 |--------|-------------|--------|
 | `day_period` | AM/PM display style | Possible |
 | Component options | Individual field control (year, month, day, etc.) | Experimental |
-| `numbering_system` | Numbering system selection | Possible |
+
+### Numbering System
+
+Numbering system is supported via BCP 47 locale extension (`-u-nu-xxx`):
+
+```ruby
+locale = ICU4X::Locale.parse("ja-JP-u-nu-hanidec")
+formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long)
+formatter.format(Time.utc(2025, 12, 28))  # => "二〇二五年一二月二八日"
+```
 
 ---
 
@@ -71,7 +80,16 @@ This document tracks which JavaScript Intl API options are supported in ICU4X Ru
 | `sign_display` | always/never/exceptZero | Planned |
 | `minimum_significant_digits` | Significant digits control | Possible |
 | `maximum_significant_digits` | Significant digits control | Possible |
-| `numbering_system` | Numbering system selection | Possible |
+
+### Numbering System
+
+Numbering system is supported via BCP 47 locale extension (`-u-nu-xxx`):
+
+```ruby
+locale = ICU4X::Locale.parse("ja-JP-u-nu-hanidec")
+formatter = ICU4X::NumberFormat.new(locale, provider:)
+formatter.format(1234)  # => "一,二三四"
+```
 
 ---
 
@@ -109,11 +127,15 @@ This document tracks which JavaScript Intl API options are supported in ICU4X Ru
 - `format(value, unit)` - Format a relative time value
 - `format_to_parts(value, unit)` - Get formatted parts array
 
-### Missing Options
+### Numbering System
 
-| Option | Intl Feature | Status |
-|--------|-------------|--------|
-| `numbering_system` | Numbering system selection | Possible |
+Numbering system is supported via BCP 47 locale extension (`-u-nu-xxx`):
+
+```ruby
+locale = ICU4X::Locale.parse("ja-u-nu-hanidec")
+rtf = ICU4X::RelativeTimeFormat.new(locale, provider:)
+rtf.format(-3, :day)  # => "三 日前"
+```
 
 ---
 
@@ -169,12 +191,11 @@ This document tracks which JavaScript Intl API options are supported in ICU4X Ru
 ### Medium Priority (Experimental Features)
 
 1. **DateTimeFormat component options** - Experimental but in demand
-2. **numbering_system** - Useful for multilingual support
 
 ### Low Priority (Waiting for ICU4X)
 
-3. **NumberFormat extensions** - Waiting for ICU4X #6804 (currency_display, unit, compact, etc.)
-4. **DisplayNames additional types** - Blocked (currency, calendar, date_time_field not in ICU4X displaynames module)
+2. **NumberFormat extensions** - Waiting for ICU4X #6804 (currency_display, unit, compact, etc.)
+3. **DisplayNames additional types** - Blocked (currency, calendar, date_time_field not in ICU4X displaynames module)
 
 ---
 

@@ -209,6 +209,26 @@ dtf.resolved_options
 # }
 ```
 
+### Numbering System
+
+Specify a numbering system using BCP 47 locale extensions (`-u-nu-xxx`):
+
+```ruby
+# Han decimal numerals
+locale = ICU4X::Locale.parse("ja-JP-u-nu-hanidec")
+dtf = ICU4X::DateTimeFormat.new(locale, provider: provider, date_style: :long)
+dtf.format(Time.utc(2025, 12, 28))
+# => "二〇二五年一二月二八日"
+
+# Thai numerals
+locale = ICU4X::Locale.parse("th-TH-u-nu-thai")
+dtf = ICU4X::DateTimeFormat.new(locale, provider: provider, date_style: :short)
+dtf.format(Time.utc(2025, 12, 28))
+# => "๒๘/๑๒/๖๘"
+```
+
+See [NumberFormat - Numbering System](number_format.md#numbering-system) for available numbering systems.
+
 ---
 
 ## Timezone Management
