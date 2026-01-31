@@ -2,6 +2,7 @@ use crate::data_provider::DataProvider;
 use crate::helpers;
 use fixed_decimal::{Decimal, SignedRoundingMode, UnsignedRoundingMode};
 use icu::decimal::options::{DecimalFormatterOptions, GroupingStrategy};
+use icu::decimal::parts as decimal_parts;
 use icu::decimal::{DecimalFormatter, DecimalFormatterPreferences};
 use icu::experimental::dimension::currency::CurrencyCode;
 use icu::experimental::dimension::currency::formatter::{
@@ -15,9 +16,11 @@ use icu::experimental::dimension::percent::options::PercentFormatterOptions;
 use icu_provider::buf::AsDeserializingBufferProvider;
 use icu4x_macros::RubySymbol;
 use magnus::{
-    Error, RHash, RModule, Ruby, TryConvert, Value, function, method, prelude::*,
+    Error, RArray, RHash, RModule, Ruby, TryConvert, Value, function, method, prelude::*,
 };
+use std::fmt;
 use tinystr::TinyAsciiStr;
+use writeable::{Part, PartsWrite, Writeable};
 
 /// The style of number formatting
 #[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
@@ -67,6 +70,110 @@ enum FormatterKind {
     Decimal(DecimalFormatter),
     Percent(PercentFormatter<DecimalFormatter>),
     Currency(CurrencyFormatter, CurrencyCode),
+}
+
+/// A collector for formatted parts that handles nested part annotations.
+struct PartsCollector {
+    parts: Vec<(String, Part)>,
+    current_buffer: String,
+    /// Stack of part contexts for handling nested with_part calls
+    part_stack: Vec<Part>,
+}
+
+impl PartsCollector {
+    fn new() -> Self {
+        Self {
+            parts: Vec::new(),
+            current_buffer: String::new(),
+            part_stack: Vec::new(),
+        }
+    }
+
+    fn flush(&mut self) {
+        // Store any remaining content as "literal"
+        if !self.current_buffer.is_empty() {
+            self.parts.push((
+                std::mem::take(&mut self.current_buffer),
+                Part {
+                    category: "literal",
+                    value: "literal",
+                },
+            ));
+        }
+    }
+
+    fn into_parts(mut self) -> Vec<(String, Part)> {
+        self.flush();
+        self.parts
+    }
+}
+
+impl fmt::Write for PartsCollector {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        self.current_buffer.push_str(s);
+        Ok(())
+    }
+}
+
+impl PartsWrite for PartsCollector {
+    type SubPartsWrite = Self;
+
+    fn with_part(
+        &mut self,
+        part: Part,
+        mut f: impl FnMut(&mut Self::SubPartsWrite) -> fmt::Result,
+    ) -> fmt::Result {
+        // If at top level, store any buffered content as literal before entering new part
+        if self.part_stack.is_empty() && !self.current_buffer.is_empty() {
+            self.parts.push((
+                std::mem::take(&mut self.current_buffer),
+                Part {
+                    category: "literal",
+                    value: "literal",
+                },
+            ));
+        }
+
+        // Push this part onto the stack
+        self.part_stack.push(part);
+
+        // Execute the writing function
+        f(self)?;
+
+        // Pop this part from the stack
+        self.part_stack.pop();
+
+        // If back at top level, store collected content with effective part
+        if self.part_stack.is_empty() && !self.current_buffer.is_empty() {
+            self.parts
+                .push((std::mem::take(&mut self.current_buffer), part));
+        }
+
+        Ok(())
+    }
+}
+
+/// Convert ICU4X decimal Part to Ruby symbol name
+fn part_to_symbol_name(part: &Part) -> &'static str {
+    if *part == decimal_parts::INTEGER {
+        "integer"
+    } else if *part == decimal_parts::FRACTION {
+        "fraction"
+    } else if *part == decimal_parts::DECIMAL {
+        "decimal"
+    } else if *part == decimal_parts::GROUP {
+        "group"
+    } else if *part == decimal_parts::MINUS_SIGN {
+        "minus_sign"
+    } else if *part == decimal_parts::PLUS_SIGN {
+        "plus_sign"
+    } else if part.category == "currency" {
+        "currency"
+    } else if part.category == "percent" {
+        "percent_sign"
+    } else {
+        "literal"
+    }
 }
 
 /// Ruby wrapper for ICU4X number formatters
@@ -298,6 +405,73 @@ impl NumberFormat {
         Ok(formatted)
     }
 
+    /// Format a number and return an array of FormattedPart
+    ///
+    /// # Arguments
+    /// * `number` - An integer, float, or BigDecimal
+    ///
+    /// # Returns
+    /// An array of FormattedPart objects with :type and :value
+    fn format_to_parts(&self, number: Value) -> Result<RArray, Error> {
+        let ruby = Ruby::get().expect("Ruby runtime should be available");
+
+        let mut decimal = Self::convert_to_decimal(&ruby, number)?;
+
+        // For percent style, multiply by 100 (same as Intl.NumberFormat)
+        if self.style == Style::Percent {
+            decimal.multiply_pow10(2);
+            decimal.trim_start();
+        }
+
+        // Apply digit options (order matters: round first, then pad)
+        if let Some(max) = self.maximum_fraction_digits {
+            decimal.round_with_mode(-max, self.rounding_mode.to_signed_rounding_mode());
+        }
+        if let Some(min) = self.minimum_fraction_digits {
+            decimal.pad_end(-min);
+        }
+        if let Some(min) = self.minimum_integer_digits {
+            decimal.pad_start(min);
+        }
+
+        // Format and collect parts
+        let mut collector = PartsCollector::new();
+        match &self.inner {
+            FormatterKind::Decimal(formatter) => {
+                formatter
+                    .format(&decimal)
+                    .write_to_parts(&mut collector)
+                    .map_err(|e| Error::new(ruby.exception_runtime_error(), format!("{}", e)))?;
+            }
+            FormatterKind::Percent(formatter) => {
+                formatter
+                    .format(&decimal)
+                    .write_to_parts(&mut collector)
+                    .map_err(|e| Error::new(ruby.exception_runtime_error(), format!("{}", e)))?;
+            }
+            FormatterKind::Currency(formatter, currency_code) => {
+                formatter
+                    .format_fixed_decimal(&decimal, *currency_code)
+                    .write_to_parts(&mut collector)
+                    .map_err(|e| Error::new(ruby.exception_runtime_error(), format!("{}", e)))?;
+            }
+        }
+
+        // Get the FormattedPart class
+        let formatted_part_class: Value = ruby.eval("ICU4X::FormattedPart")?;
+
+        // Convert collected parts to Ruby array
+        let result = ruby.ary_new();
+        for (value, part) in collector.into_parts() {
+            let symbol_name = part_to_symbol_name(&part);
+            let part_obj: Value =
+                formatted_part_class.funcall("[]", (ruby.to_symbol(symbol_name), value.as_str()))?;
+            result.push(part_obj)?;
+        }
+
+        Ok(result)
+    }
+
     /// Convert Ruby number to Decimal
     fn convert_to_decimal(ruby: &Ruby, number: Value) -> Result<Decimal, Error> {
         if number.is_kind_of(ruby.class_float()) {
@@ -382,6 +556,10 @@ pub fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
     let class = module.define_class("NumberFormat", ruby.class_object())?;
     class.define_singleton_method("new", function!(NumberFormat::new, -1))?;
     class.define_method("format", method!(NumberFormat::format, 1))?;
+    class.define_method(
+        "format_to_parts",
+        method!(NumberFormat::format_to_parts, 1),
+    )?;
     class.define_method(
         "resolved_options",
         method!(NumberFormat::resolved_options, 0),
