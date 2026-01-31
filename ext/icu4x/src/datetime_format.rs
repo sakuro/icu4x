@@ -312,27 +312,7 @@ impl DateTimeFormat {
     /// A formatted string
     fn format(&self, time: Value) -> Result<String, Error> {
         let ruby = Ruby::get().expect("Ruby runtime should be available");
-
-        // Convert to Time if the object responds to #to_time
-        let time_value = if time.respond_to("to_time", false)? {
-            time.funcall::<_, _, Value>("to_time", ())?
-        } else {
-            time
-        };
-
-        // Validate that the result is a Time object
-        let time_class: Value = ruby.eval("Time")?;
-        if !time_value.is_kind_of(magnus::RClass::try_convert(time_class)?) {
-            return Err(Error::new(
-                ruby.exception_type_error(),
-                "argument must be a Time object or respond to #to_time",
-            ));
-        }
-
-        // Convert Ruby Time to ICU4X DateTime, applying timezone if specified
-        let datetime = self.convert_time_to_datetime(&ruby, time_value)?;
-
-        // Format the datetime
+        let datetime = self.prepare_datetime(&ruby, time)?;
         let formatted = self.inner.format(&datetime);
         Ok(formatted.to_string())
     }
@@ -346,7 +326,22 @@ impl DateTimeFormat {
     /// An array of FormattedPart objects with :type and :value
     fn format_to_parts(&self, time: Value) -> Result<RArray, Error> {
         let ruby = Ruby::get().expect("Ruby runtime should be available");
+        let datetime = self.prepare_datetime(&ruby, time)?;
 
+        let formatted = self.inner.format(&datetime);
+        let mut collector = PartsCollector::new();
+        formatted
+            .write_to_parts(&mut collector)
+            .map_err(|e| Error::new(ruby.exception_runtime_error(), format!("{}", e)))?;
+
+        parts_to_ruby_array(&ruby, collector, part_to_symbol_name)
+    }
+
+    /// Prepare a Ruby Time value for formatting.
+    ///
+    /// Converts objects responding to #to_time, validates the result,
+    /// and converts to ICU4X DateTime.
+    fn prepare_datetime(&self, ruby: &Ruby, time: Value) -> Result<DateTime<Gregorian>, Error> {
         // Convert to Time if the object responds to #to_time
         let time_value = if time.respond_to("to_time", false)? {
             time.funcall::<_, _, Value>("to_time", ())?
@@ -363,17 +358,7 @@ impl DateTimeFormat {
             ));
         }
 
-        // Convert Ruby Time to ICU4X DateTime, applying timezone if specified
-        let datetime = self.convert_time_to_datetime(&ruby, time_value)?;
-
-        // Format the datetime and collect parts
-        let formatted = self.inner.format(&datetime);
-        let mut collector = PartsCollector::new();
-        formatted
-            .write_to_parts(&mut collector)
-            .map_err(|e| Error::new(ruby.exception_runtime_error(), format!("{}", e)))?;
-
-        parts_to_ruby_array(&ruby, collector, part_to_symbol_name)
+        self.convert_time_to_datetime(ruby, time_value)
     }
 
     /// Convert Ruby Time to ICU4X DateTime<Gregorian>
