@@ -1,5 +1,6 @@
 use crate::data_provider::DataProvider;
 use crate::helpers;
+use crate::parts_collector::{PartsCollector, parts_to_ruby_array};
 use fixed_decimal::{Decimal, SignedRoundingMode, UnsignedRoundingMode};
 use icu::decimal::options::{DecimalFormatterOptions, GroupingStrategy};
 use icu::decimal::parts as decimal_parts;
@@ -15,12 +16,9 @@ use icu::experimental::dimension::percent::formatter::{
 use icu::experimental::dimension::percent::options::PercentFormatterOptions;
 use icu_provider::buf::AsDeserializingBufferProvider;
 use icu4x_macros::RubySymbol;
-use magnus::{
-    Error, RArray, RHash, RModule, Ruby, TryConvert, Value, function, method, prelude::*,
-};
-use std::fmt;
+use magnus::{Error, RArray, RHash, RModule, Ruby, TryConvert, Value, function, method, prelude::*};
 use tinystr::TinyAsciiStr;
-use writeable::{Part, PartsWrite, Writeable};
+use writeable::{Part, Writeable};
 
 /// The style of number formatting
 #[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
@@ -70,87 +68,6 @@ enum FormatterKind {
     Decimal(DecimalFormatter),
     Percent(PercentFormatter<DecimalFormatter>),
     Currency(CurrencyFormatter, CurrencyCode),
-}
-
-/// A collector for formatted parts that handles nested part annotations.
-struct PartsCollector {
-    parts: Vec<(String, Part)>,
-    current_buffer: String,
-    /// Stack of part contexts for handling nested with_part calls
-    part_stack: Vec<Part>,
-}
-
-impl PartsCollector {
-    fn new() -> Self {
-        Self {
-            parts: Vec::new(),
-            current_buffer: String::new(),
-            part_stack: Vec::new(),
-        }
-    }
-
-    fn flush(&mut self) {
-        // Store any remaining content as "literal"
-        if !self.current_buffer.is_empty() {
-            self.parts.push((
-                std::mem::take(&mut self.current_buffer),
-                Part {
-                    category: "literal",
-                    value: "literal",
-                },
-            ));
-        }
-    }
-
-    fn into_parts(mut self) -> Vec<(String, Part)> {
-        self.flush();
-        self.parts
-    }
-}
-
-impl fmt::Write for PartsCollector {
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        self.current_buffer.push_str(s);
-        Ok(())
-    }
-}
-
-impl PartsWrite for PartsCollector {
-    type SubPartsWrite = Self;
-
-    fn with_part(
-        &mut self,
-        part: Part,
-        mut f: impl FnMut(&mut Self::SubPartsWrite) -> fmt::Result,
-    ) -> fmt::Result {
-        // If at top level, store any buffered content as literal before entering new part
-        if self.part_stack.is_empty() && !self.current_buffer.is_empty() {
-            self.parts.push((
-                std::mem::take(&mut self.current_buffer),
-                Part {
-                    category: "literal",
-                    value: "literal",
-                },
-            ));
-        }
-
-        // Push this part onto the stack
-        self.part_stack.push(part);
-
-        // Execute the writing function
-        f(self)?;
-
-        // Pop this part from the stack
-        self.part_stack.pop();
-
-        // If back at top level, store collected content with effective part
-        if self.part_stack.is_empty() && !self.current_buffer.is_empty() {
-            self.parts
-                .push((std::mem::take(&mut self.current_buffer), part));
-        }
-
-        Ok(())
-    }
 }
 
 /// Convert ICU4X decimal Part to Ruby symbol name
@@ -457,19 +374,7 @@ impl NumberFormat {
             }
         }
 
-        // Get the FormattedPart class
-        let formatted_part_class: Value = ruby.eval("ICU4X::FormattedPart")?;
-
-        // Convert collected parts to Ruby array
-        let result = ruby.ary_new();
-        for (value, part) in collector.into_parts() {
-            let symbol_name = part_to_symbol_name(&part);
-            let part_obj: Value =
-                formatted_part_class.funcall("[]", (ruby.to_symbol(symbol_name), value.as_str()))?;
-            result.push(part_obj)?;
-        }
-
-        Ok(result)
+        parts_to_ruby_array(&ruby, collector, part_to_symbol_name)
     }
 
     /// Convert Ruby number to Decimal

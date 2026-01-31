@@ -7,6 +7,7 @@ mod helpers;
 mod list_format;
 mod locale;
 mod number_format;
+mod parts_collector;
 mod plural_rules;
 mod relative_time_format;
 mod segmenter;

@@ -1,5 +1,6 @@
 use crate::data_provider::DataProvider;
 use crate::helpers;
+use crate::parts_collector::{PartsCollector, parts_to_ruby_array};
 use icu::calendar::preferences::CalendarAlgorithm;
 use icu::calendar::{AnyCalendarKind, Date, Gregorian};
 use icu::datetime::fieldsets::enums::{
@@ -15,11 +16,8 @@ use icu_provider::buf::AsDeserializingBufferProvider;
 use icu4x_macros::RubySymbol;
 use jiff::Timestamp;
 use jiff::tz::TimeZone;
-use magnus::{
-    Error, RArray, RHash, RModule, Ruby, TryConvert, Value, function, method, prelude::*,
-};
-use std::fmt;
-use writeable::{Part, PartsWrite, Writeable};
+use magnus::{Error, RArray, RHash, RModule, Ruby, TryConvert, Value, function, method, prelude::*};
+use writeable::{Part, Writeable};
 
 /// Date style option
 #[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
@@ -94,90 +92,6 @@ impl Calendar {
             AnyCalendarKind::Roc => Calendar::Roc,
             _ => Calendar::Gregory,
         }
-    }
-}
-
-/// A collector for formatted parts that handles nested part annotations.
-/// ICU4X uses nested parts - e.g., datetime/day wraps decimal/integer.
-/// We track a stack of parts and prefer datetime-level annotations.
-struct PartsCollector {
-    parts: Vec<(String, Part)>,
-    current_buffer: String,
-    /// Stack of part contexts for handling nested with_part calls
-    part_stack: Vec<Part>,
-}
-
-impl PartsCollector {
-    fn new() -> Self {
-        Self {
-            parts: Vec::new(),
-            current_buffer: String::new(),
-            part_stack: Vec::new(),
-        }
-    }
-
-    fn flush(&mut self) {
-        // Store any remaining content as "literal"
-        if !self.current_buffer.is_empty() {
-            self.parts.push((
-                std::mem::take(&mut self.current_buffer),
-                Part {
-                    category: "literal",
-                    value: "literal",
-                },
-            ));
-        }
-    }
-
-    fn into_parts(mut self) -> Vec<(String, Part)> {
-        self.flush();
-        self.parts
-    }
-}
-
-impl fmt::Write for PartsCollector {
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        self.current_buffer.push_str(s);
-        Ok(())
-    }
-}
-
-impl PartsWrite for PartsCollector {
-    type SubPartsWrite = Self;
-
-    fn with_part(
-        &mut self,
-        part: Part,
-        mut f: impl FnMut(&mut Self::SubPartsWrite) -> fmt::Result,
-    ) -> fmt::Result {
-        // If at top level, store any buffered content as literal before entering new part
-        if self.part_stack.is_empty() && !self.current_buffer.is_empty() {
-            self.parts.push((
-                std::mem::take(&mut self.current_buffer),
-                Part {
-                    category: "literal",
-                    value: "literal",
-                },
-            ));
-        }
-
-        // Push this part onto the stack
-        self.part_stack.push(part);
-
-        // Execute the writing function
-        f(self)?;
-
-        // Pop this part from the stack
-        self.part_stack.pop();
-
-        // If back at top level, store collected content with effective part
-        if self.part_stack.is_empty() && !self.current_buffer.is_empty() {
-            // Use the part we just processed (which was the effective datetime part)
-            self.parts
-                .push((std::mem::take(&mut self.current_buffer), part));
-        }
-
-        Ok(())
     }
 }
 
@@ -459,21 +373,7 @@ impl DateTimeFormat {
             .write_to_parts(&mut collector)
             .map_err(|e| Error::new(ruby.exception_runtime_error(), format!("{}", e)))?;
 
-        // Get the FormattedPart class
-        let formatted_part_class: Value = ruby.eval("ICU4X::FormattedPart")?;
-
-        // Convert collected parts to Ruby array
-        let result = ruby.ary_new();
-        for (value, part) in collector.into_parts() {
-            let symbol_name = part_to_symbol_name(&part);
-            let part_obj: Value = formatted_part_class.funcall(
-                "[]",
-                (ruby.to_symbol(symbol_name), value.as_str()),
-            )?;
-            result.push(part_obj)?;
-        }
-
-        Ok(result)
+        parts_to_ruby_array(&ruby, collector, part_to_symbol_name)
     }
 
     /// Convert Ruby Time to ICU4X DateTime<Gregorian>
