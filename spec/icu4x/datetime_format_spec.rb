@@ -325,6 +325,34 @@ RSpec.describe ICU4X::DateTimeFormat do
     end
   end
 
+  describe "#format with numbering system" do
+    context "with Han decimal numerals (hanidec)" do
+      let(:locale) { ICU4X::Locale.parse("ja-JP-u-nu-hanidec") }
+      let(:formatter) { ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long) }
+
+      it "formats date using Han decimal numerals" do
+        result = formatter.format(Time.utc(2025, 12, 28))
+
+        expect(result).to eq("二〇二五年一二月二八日")
+      end
+
+      it "includes numbering system in resolved_options locale" do
+        expect(formatter.resolved_options[:locale]).to eq("ja-JP-u-nu-hanidec")
+      end
+    end
+
+    context "with Thai numerals (thai)" do
+      let(:locale) { ICU4X::Locale.parse("th-TH-u-nu-thai") }
+      let(:formatter) { ICU4X::DateTimeFormat.new(locale, provider:, date_style: :short) }
+
+      it "formats date using Thai numerals" do
+        result = formatter.format(Time.utc(2025, 12, 28))
+
+        expect(result).to include("๒๘")
+      end
+    end
+  end
+
   describe "#format_to_parts" do
     context "with en-US locale and date_style" do
       let(:locale) { ICU4X::Locale.parse("en-US") }

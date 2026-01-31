@@ -196,6 +196,28 @@ parts.map(&:value).join  # => "3 days ago"
 
 ---
 
+## Numbering System
+
+Specify a numbering system using BCP 47 locale extensions (`-u-nu-xxx`):
+
+```ruby
+# Han decimal numerals
+locale = ICU4X::Locale.parse("ja-u-nu-hanidec")
+rtf = ICU4X::RelativeTimeFormat.new(locale, provider: provider)
+rtf.format(-3, :day)
+# => "三 日前"
+
+# Arabic-Indic numerals
+locale = ICU4X::Locale.parse("ar-u-nu-arab")
+rtf = ICU4X::RelativeTimeFormat.new(locale, provider: provider)
+rtf.format(-3, :day)
+# => "قبل ٣ أيام"
+```
+
+See [NumberFormat - Numbering System](number_format.md#numbering-system) for available numbering systems.
+
+---
+
 ## Notes
 
 - Negative values represent past time ("X ago")

@@ -446,6 +446,11 @@
 #     #   formatter = ICU4X::NumberFormat.new(locale, style: :percent)
 #     #   formatter.format(0.42)  #=> "42%"
 #     #
+#     # @example Han decimal numerals via locale extension
+#     #   locale = ICU4X::Locale.parse("ja-JP-u-nu-hanidec")
+#     #   formatter = ICU4X::NumberFormat.new(locale, provider: provider)
+#     #   formatter.format(1234)  #=> "一,二三四"
+#     #
 #     class NumberFormat
 #       # Creates a new NumberFormat instance.
 #       #
@@ -536,6 +541,11 @@
 #     #   formatter = ICU4X::DateTimeFormat.new(locale, date_style: :long, calendar: :japanese)
 #     #   formatter.format(Time.now)  #=> "令和8年1月1日"
 #     #
+#     # @example Han decimal numerals via locale extension
+#     #   locale = ICU4X::Locale.parse("ja-JP-u-nu-hanidec")
+#     #   formatter = ICU4X::DateTimeFormat.new(locale, provider: provider, date_style: :long)
+#     #   formatter.format(Time.utc(2025, 12, 28))  #=> "二〇二五年一二月二八日"
+#     #
 #     class DateTimeFormat
 #       # Creates a new DateTimeFormat instance.
 #       #
@@ -619,6 +629,11 @@
 #     #   formatter = ICU4X::RelativeTimeFormat.new(locale, numeric: :auto)
 #     #   formatter.format(-1, :day)   #=> "yesterday"
 #     #   formatter.format(0, :day)    #=> "today"
+#     #
+#     # @example Han decimal numerals via locale extension
+#     #   locale = ICU4X::Locale.parse("ja-u-nu-hanidec")
+#     #   formatter = ICU4X::RelativeTimeFormat.new(locale, provider: provider)
+#     #   formatter.format(-3, :day)  #=> "三 日前"
 #     #
 #     class RelativeTimeFormat
 #       # Creates a new RelativeTimeFormat instance.

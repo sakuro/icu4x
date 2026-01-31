@@ -429,6 +429,50 @@ RSpec.describe ICU4X::NumberFormat do
     end
   end
 
+  describe "#format with numbering system" do
+    let(:provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
+
+    context "with Han decimal numerals (hanidec)" do
+      let(:locale) { ICU4X::Locale.parse("ja-JP-u-nu-hanidec") }
+      let(:formatter) { ICU4X::NumberFormat.new(locale, provider:) }
+
+      it "formats using Han decimal numerals" do
+        expect(formatter.format(1234)).to eq("一,二三四")
+      end
+
+      it "includes numbering system in resolved_options locale" do
+        expect(formatter.resolved_options[:locale]).to eq("ja-JP-u-nu-hanidec")
+      end
+    end
+
+    context "with Arabic-Indic numerals (arab)" do
+      let(:locale) { ICU4X::Locale.parse("ar-EG-u-nu-arab") }
+      let(:formatter) { ICU4X::NumberFormat.new(locale, provider:) }
+
+      it "formats using Arabic-Indic numerals" do
+        expect(formatter.format(1234)).to eq("١٬٢٣٤")
+      end
+    end
+
+    context "with Thai numerals (thai)" do
+      let(:locale) { ICU4X::Locale.parse("th-TH-u-nu-thai") }
+      let(:formatter) { ICU4X::NumberFormat.new(locale, provider:) }
+
+      it "formats using Thai numerals" do
+        expect(formatter.format(1234)).to eq("๑,๒๓๔")
+      end
+    end
+
+    context "with Latin numerals override (latn)" do
+      let(:locale) { ICU4X::Locale.parse("ar-EG-u-nu-latn") }
+      let(:formatter) { ICU4X::NumberFormat.new(locale, provider:) }
+
+      it "overrides default to use Latin numerals" do
+        expect(formatter.format(1234)).to eq("1,234")
+      end
+    end
+  end
+
   describe "#format_to_parts" do
     let(:provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
     let(:locale) { ICU4X::Locale.parse("en-US") }

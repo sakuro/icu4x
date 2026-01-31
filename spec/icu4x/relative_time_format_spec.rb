@@ -275,6 +275,36 @@ RSpec.describe ICU4X::RelativeTimeFormat do
     end
   end
 
+  describe "#format with numbering system" do
+    let(:provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
+
+    context "with Han decimal numerals (hanidec)" do
+      let(:locale) { ICU4X::Locale.parse("ja-u-nu-hanidec") }
+      let(:rtf) { ICU4X::RelativeTimeFormat.new(locale, provider:) }
+
+      it "formats using Han decimal numerals" do
+        result = rtf.format(-3, :day)
+
+        expect(result).to eq("三 日前")
+      end
+
+      it "includes numbering system in resolved_options locale" do
+        expect(rtf.resolved_options[:locale]).to eq("ja-u-nu-hanidec")
+      end
+    end
+
+    context "with Arabic-Indic numerals (arab)" do
+      let(:locale) { ICU4X::Locale.parse("ar-u-nu-arab") }
+      let(:rtf) { ICU4X::RelativeTimeFormat.new(locale, provider:) }
+
+      it "formats using Arabic-Indic numerals" do
+        result = rtf.format(-3, :day)
+
+        expect(result).to include("٣")
+      end
+    end
+  end
+
   describe "#format_to_parts" do
     let(:provider) { ICU4X::DataProvider.from_blob(valid_blob_path) }
     let(:locale) { ICU4X::Locale.parse("en") }
