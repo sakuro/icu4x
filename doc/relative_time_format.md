@@ -38,6 +38,13 @@ module ICU4X
     # @raise [ArgumentError] If unit is invalid
     def format(value, unit) = ...
 
+    # Format relative time and return an array of parts
+    # @param value [Integer] The relative time value (negative = past, positive = future)
+    # @param unit [Symbol] :second, :minute, :hour, :day, :week, :month, :quarter, :year
+    # @return [Array<FormattedPart>]
+    # @raise [ArgumentError] If unit is invalid
+    def format_to_parts(value, unit) = ...
+
     # Get resolved options
     # @return [Hash]
     def resolved_options = ...
@@ -160,6 +167,31 @@ rtf.format(-1, :week)      # => "1 week ago"
 rtf.format(6, :month)      # => "in 6 months"
 rtf.format(-2, :quarter)   # => "2 quarters ago"
 rtf.format(1, :year)       # => "in 1 year"
+```
+
+---
+
+## format_to_parts
+
+Break down formatted output into typed parts.
+
+### Part Types
+
+| Type | Description | Example |
+|------|-------------|---------|
+| `:literal` | The entire formatted string | "3 days ago" |
+
+NOTE: The current ICU4X experimental RelativeTimeFormatter does not provide separate part annotations for the numeric value. The entire formatted string is returned as a single `:literal` part.
+
+### Example
+
+```ruby
+rtf = ICU4X::RelativeTimeFormat.new(locale, provider: provider)
+parts = rtf.format_to_parts(-3, :day)
+# => [#<ICU4X::FormattedPart type=:literal value="3 days ago">]
+
+# Reconstruct the formatted string
+parts.map(&:value).join  # => "3 days ago"
 ```
 
 ---
