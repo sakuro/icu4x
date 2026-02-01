@@ -4,7 +4,8 @@ use crate::parts_collector::{PartsCollector, parts_to_ruby_array};
 use icu::calendar::preferences::CalendarAlgorithm;
 use icu::calendar::{AnyCalendarKind, Date, Gregorian};
 use icu::datetime::fieldsets::enums::{
-    CompositeDateTimeFieldSet, DateAndTimeFieldSet, DateFieldSet, TimeFieldSet,
+    CalendarPeriodFieldSet, CompositeDateTimeFieldSet, DateAndTimeFieldSet, DateFieldSet,
+    TimeFieldSet,
 };
 use icu::datetime::fieldsets::{self};
 use icu::datetime::input::DateTime;
@@ -53,6 +54,85 @@ impl HourCycle {
             HourCycle::H12 => IcuHourCycle::H12,
             HourCycle::H23 => IcuHourCycle::H23,
         }
+    }
+}
+
+/// Year component option
+#[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
+enum YearStyle {
+    Numeric,
+    TwoDigit,
+}
+
+/// Month component option
+#[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
+enum MonthStyle {
+    Numeric,
+    TwoDigit,
+    Long,
+    Short,
+    Narrow,
+}
+
+/// Day component option
+#[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
+enum DayStyle {
+    Numeric,
+    TwoDigit,
+}
+
+/// Weekday component option
+#[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
+enum WeekdayStyle {
+    Long,
+    Short,
+    Narrow,
+}
+
+/// Hour component option
+#[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
+enum HourStyle {
+    Numeric,
+    TwoDigit,
+}
+
+/// Minute component option
+#[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
+enum MinuteStyle {
+    Numeric,
+    TwoDigit,
+}
+
+/// Second component option
+#[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
+enum SecondStyle {
+    Numeric,
+    TwoDigit,
+}
+
+/// Component options for date/time formatting
+#[derive(Clone, Copy, Default)]
+struct ComponentOptions {
+    year: Option<YearStyle>,
+    month: Option<MonthStyle>,
+    day: Option<DayStyle>,
+    weekday: Option<WeekdayStyle>,
+    hour: Option<HourStyle>,
+    minute: Option<MinuteStyle>,
+    second: Option<SecondStyle>,
+}
+
+impl ComponentOptions {
+    fn has_date_components(&self) -> bool {
+        self.year.is_some() || self.month.is_some() || self.day.is_some() || self.weekday.is_some()
+    }
+
+    fn has_time_components(&self) -> bool {
+        self.hour.is_some() || self.minute.is_some() || self.second.is_some()
+    }
+
+    fn is_empty(&self) -> bool {
+        !self.has_date_components() && !self.has_time_components()
     }
 }
 
@@ -152,6 +232,7 @@ pub struct DateTimeFormat {
     jiff_timezone: Option<TimeZone>,
     calendar: Calendar,
     hour_cycle: Option<HourCycle>,
+    component_options: Option<ComponentOptions>,
 }
 
 // SAFETY: This type is marked as Send to allow Ruby to move it between threads.
@@ -202,11 +283,25 @@ impl DateTimeFormat {
         let time_style =
             helpers::extract_symbol(ruby, &kwargs, "time_style", TimeStyle::from_ruby_symbol)?;
 
-        // At least one of date_style or time_style must be specified
-        if date_style.is_none() && time_style.is_none() {
+        // Extract component options
+        let component_options = Self::extract_component_options(ruby, &kwargs)?;
+
+        // Validate: style options and component options are mutually exclusive
+        let has_style_options = date_style.is_some() || time_style.is_some();
+        let has_component_options = !component_options.is_empty();
+
+        if has_style_options && has_component_options {
             return Err(Error::new(
                 ruby.exception_arg_error(),
-                "at least one of date_style or time_style must be specified",
+                "cannot use date_style/time_style together with component options (year, month, day, etc.)",
+            ));
+        }
+
+        // At least one of date_style, time_style, or component options must be specified
+        if !has_style_options && !has_component_options {
+            return Err(Error::new(
+                ruby.exception_arg_error(),
+                "at least one of date_style, time_style, or component options (year, month, day, etc.) must be specified",
             ));
         }
 
@@ -256,8 +351,12 @@ impl DateTimeFormat {
             )
         })?;
 
-        // Create field set based on date_style and time_style
-        let field_set = Self::create_field_set(date_style, time_style);
+        // Create field set based on options
+        let field_set = if has_component_options {
+            Self::create_field_set_from_components(ruby, &component_options)?
+        } else {
+            Self::create_field_set_from_style(date_style, time_style)
+        };
 
         // Create formatter with calendar and hour_cycle preferences
         let mut prefs: DateTimeFormatterPreferences = (&icu_locale).into();
@@ -289,11 +388,127 @@ impl DateTimeFormat {
             jiff_timezone,
             calendar: resolved_calendar,
             hour_cycle,
+            component_options: if has_component_options {
+                Some(component_options)
+            } else {
+                None
+            },
         })
     }
 
+    /// Extract component options from kwargs
+    fn extract_component_options(ruby: &Ruby, kwargs: &RHash) -> Result<ComponentOptions, Error> {
+        let year = helpers::extract_symbol(ruby, kwargs, "year", YearStyle::from_ruby_symbol)?;
+        let month = helpers::extract_symbol(ruby, kwargs, "month", MonthStyle::from_ruby_symbol)?;
+        let day = helpers::extract_symbol(ruby, kwargs, "day", DayStyle::from_ruby_symbol)?;
+        let weekday =
+            helpers::extract_symbol(ruby, kwargs, "weekday", WeekdayStyle::from_ruby_symbol)?;
+        let hour = helpers::extract_symbol(ruby, kwargs, "hour", HourStyle::from_ruby_symbol)?;
+        let minute =
+            helpers::extract_symbol(ruby, kwargs, "minute", MinuteStyle::from_ruby_symbol)?;
+        let second =
+            helpers::extract_symbol(ruby, kwargs, "second", SecondStyle::from_ruby_symbol)?;
+
+        Ok(ComponentOptions {
+            year,
+            month,
+            day,
+            weekday,
+            hour,
+            minute,
+            second,
+        })
+    }
+
+    /// Create field set from component options
+    ///
+    /// Maps component combinations to appropriate ICU4X Field Sets.
+    /// Field Sets determine which components appear; the locale determines their order.
+    fn create_field_set_from_components(
+        ruby: &Ruby,
+        opts: &ComponentOptions,
+    ) -> Result<CompositeDateTimeFieldSet, Error> {
+        let has_date = opts.has_date_components();
+        let has_time = opts.has_time_components();
+
+        match (has_date, has_time) {
+            (true, true) => {
+                // Date and time components
+                Ok(CompositeDateTimeFieldSet::DateTime(
+                    DateAndTimeFieldSet::YMDT(fieldsets::YMDT::medium()),
+                ))
+            }
+            (true, false) => {
+                // Date only - choose field set based on which components are specified
+                let has_year = opts.year.is_some();
+                let has_month = opts.month.is_some();
+                let has_day = opts.day.is_some();
+                let has_weekday = opts.weekday.is_some();
+
+                match (has_year, has_month, has_day, has_weekday) {
+                    // Year + Month + Day + Weekday
+                    (true, true, true, true) => Ok(CompositeDateTimeFieldSet::Date(
+                        DateFieldSet::YMDE(fieldsets::YMDE::medium()),
+                    )),
+                    // Year + Month + Day
+                    (true, true, true, false) => Ok(CompositeDateTimeFieldSet::Date(
+                        DateFieldSet::YMD(fieldsets::YMD::medium()),
+                    )),
+                    // Month + Day + Weekday
+                    (false, true, true, true) => Ok(CompositeDateTimeFieldSet::Date(
+                        DateFieldSet::MDE(fieldsets::MDE::medium()),
+                    )),
+                    // Month + Day
+                    (false, true, true, false) => Ok(CompositeDateTimeFieldSet::Date(
+                        DateFieldSet::MD(fieldsets::MD::medium()),
+                    )),
+                    // Year + Month (calendar period)
+                    (true, true, false, _) => Ok(CompositeDateTimeFieldSet::CalendarPeriod(
+                        CalendarPeriodFieldSet::YM(fieldsets::YM::medium()),
+                    )),
+                    // Month only (calendar period)
+                    (false, true, false, _) => Ok(CompositeDateTimeFieldSet::CalendarPeriod(
+                        CalendarPeriodFieldSet::M(fieldsets::M::medium()),
+                    )),
+                    // Day + Weekday
+                    (false, false, true, true) => Ok(CompositeDateTimeFieldSet::Date(
+                        DateFieldSet::DE(fieldsets::DE::medium()),
+                    )),
+                    // Day only
+                    (false, false, true, false) => Ok(CompositeDateTimeFieldSet::Date(
+                        DateFieldSet::D(fieldsets::D::medium()),
+                    )),
+                    // Weekday only
+                    (false, false, false, true) => Ok(CompositeDateTimeFieldSet::Date(
+                        DateFieldSet::E(fieldsets::E::medium()),
+                    )),
+                    // Year only (calendar period)
+                    (true, false, false, _) => Ok(CompositeDateTimeFieldSet::CalendarPeriod(
+                        CalendarPeriodFieldSet::Y(fieldsets::Y::medium()),
+                    )),
+                    // Year + Day (not a standard combination, use YMD as fallback)
+                    (true, false, true, _) => Ok(CompositeDateTimeFieldSet::Date(
+                        DateFieldSet::YMD(fieldsets::YMD::medium()),
+                    )),
+                    // Should not happen - we checked has_date_components
+                    (false, false, false, false) => unreachable!(),
+                }
+            }
+            (false, true) => {
+                // Time only
+                Ok(CompositeDateTimeFieldSet::Time(TimeFieldSet::T(
+                    fieldsets::T::medium(),
+                )))
+            }
+            (false, false) => Err(Error::new(
+                ruby.exception_arg_error(),
+                "at least one component option must be specified",
+            )),
+        }
+    }
+
     /// Create field set based on date_style and time_style
-    fn create_field_set(
+    fn create_field_set_from_style(
         date_style: Option<DateStyle>,
         time_style: Option<TimeStyle>,
     ) -> CompositeDateTimeFieldSet {
@@ -489,6 +704,52 @@ impl DateTimeFormat {
                 ruby.to_symbol("hour_cycle"),
                 ruby.to_symbol(hc.to_symbol_name()),
             )?;
+        }
+
+        // Add component options if they were used
+        if let Some(ref opts) = self.component_options {
+            if let Some(year) = opts.year {
+                hash.aset(
+                    ruby.to_symbol("year"),
+                    ruby.to_symbol(year.to_symbol_name()),
+                )?;
+            }
+            if let Some(month) = opts.month {
+                hash.aset(
+                    ruby.to_symbol("month"),
+                    ruby.to_symbol(month.to_symbol_name()),
+                )?;
+            }
+            if let Some(day) = opts.day {
+                hash.aset(
+                    ruby.to_symbol("day"),
+                    ruby.to_symbol(day.to_symbol_name()),
+                )?;
+            }
+            if let Some(weekday) = opts.weekday {
+                hash.aset(
+                    ruby.to_symbol("weekday"),
+                    ruby.to_symbol(weekday.to_symbol_name()),
+                )?;
+            }
+            if let Some(hour) = opts.hour {
+                hash.aset(
+                    ruby.to_symbol("hour"),
+                    ruby.to_symbol(hour.to_symbol_name()),
+                )?;
+            }
+            if let Some(minute) = opts.minute {
+                hash.aset(
+                    ruby.to_symbol("minute"),
+                    ruby.to_symbol(minute.to_symbol_name()),
+                )?;
+            }
+            if let Some(second) = opts.second {
+                hash.aset(
+                    ruby.to_symbol("second"),
+                    ruby.to_symbol(second.to_symbol_name()),
+                )?;
+            }
         }
 
         Ok(hash)

@@ -528,14 +528,20 @@
 #     # Formats dates and times according to locale-specific conventions.
 #     #
 #     # DateTimeFormat supports various date and time styles and calendar systems.
+#     # You can use either style options (date_style, time_style) or component options
+#     # (year, month, day, weekday, hour, minute, second), but not both.
 #     #
-#     # @example Format a date
+#     # @example Format a date with style
 #     #   formatter = ICU4X::DateTimeFormat.new(locale, date_style: :long)
 #     #   formatter.format(Time.now)  #=> "January 1, 2026"
 #     #
-#     # @example Format date and time
+#     # @example Format date and time with styles
 #     #   formatter = ICU4X::DateTimeFormat.new(locale, date_style: :short, time_style: :short)
 #     #   formatter.format(Time.now)  #=> "1/1/26, 12:00 PM"
+#     #
+#     # @example Format with component options
+#     #   formatter = ICU4X::DateTimeFormat.new(locale, year: :numeric, month: :numeric, day: :numeric)
+#     #   formatter.format(Time.now)  #=> "Dec 28, 2025"
 #     #
 #     # @example Use Japanese calendar
 #     #   formatter = ICU4X::DateTimeFormat.new(locale, date_style: :long, calendar: :japanese)
@@ -549,24 +555,41 @@
 #     class DateTimeFormat
 #       # Creates a new DateTimeFormat instance.
 #       #
+#       # You must specify either style options (date_style/time_style) or component options
+#       # (year, month, day, weekday, hour, minute, second). These are mutually exclusive.
+#       #
 #       # @param locale [Locale] the locale for formatting
 #       # @param provider [DataProvider, nil] data provider (uses default if nil)
 #       # @param date_style [Symbol, nil] date format style: `:full`, `:long`, `:medium`, or `:short`
 #       # @param time_style [Symbol, nil] time format style: `:full`, `:long`, `:medium`, or `:short`
+#       # @param year [Symbol, nil] year component: `:numeric` or `:two_digit`
+#       # @param month [Symbol, nil] month component: `:numeric`, `:two_digit`, `:long`, `:short`, or `:narrow`
+#       # @param day [Symbol, nil] day component: `:numeric` or `:two_digit`
+#       # @param weekday [Symbol, nil] weekday component: `:long`, `:short`, or `:narrow`
+#       # @param hour [Symbol, nil] hour component: `:numeric` or `:two_digit`
+#       # @param minute [Symbol, nil] minute component: `:numeric` or `:two_digit`
+#       # @param second [Symbol, nil] second component: `:numeric` or `:two_digit`
 #       # @param time_zone [String, nil] IANA time zone identifier (e.g., "America/New_York")
 #       # @param calendar [Symbol] calendar system to use
 #       # @param hour_cycle [Symbol, nil] hour cycle: `:h11` (0-11), `:h12` (1-12), or `:h23` (0-23)
 #       # @return [DateTimeFormat] a new instance
+#       # @raise [ArgumentError] if both style and component options are specified
+#       # @raise [ArgumentError] if neither style nor component options are specified
 #       # @raise [DataError] if data for the locale is unavailable
 #       #
-#       # @example Basic usage
+#       # @example With style options
 #       #   formatter = ICU4X::DateTimeFormat.new(locale, date_style: :long, time_style: :short)
+#       #
+#       # @example With component options
+#       #   formatter = ICU4X::DateTimeFormat.new(locale, year: :numeric, month: :long, day: :numeric)
 #       #
 #       # @example With 24-hour format
 #       #   formatter = ICU4X::DateTimeFormat.new(locale, time_style: :short, hour_cycle: :h23)
 #       #   formatter.format(Time.utc(2025, 1, 1, 0, 30))  #=> "00:30:00"
 #       #
 #       def initialize(locale, provider: nil, date_style: nil, time_style: nil,
+#                      year: nil, month: nil, day: nil, weekday: nil,
+#                      hour: nil, minute: nil, second: nil,
 #                      time_zone: nil, calendar: :gregory, hour_cycle: nil); end
 #
 #       # Formats a time value according to the configured options.
@@ -610,8 +633,15 @@
 #       # @return [Hash] options hash with keys:
 #       #   - `:locale` [String] the resolved locale identifier
 #       #   - `:calendar` [Symbol] the calendar system
-#       #   - `:date_style` [Symbol] the date style (if set)
-#       #   - `:time_style` [Symbol] the time style (if set)
+#       #   - `:date_style` [Symbol] the date style (if style options used)
+#       #   - `:time_style` [Symbol] the time style (if style options used)
+#       #   - `:year` [Symbol] the year component (if component options used)
+#       #   - `:month` [Symbol] the month component (if component options used)
+#       #   - `:day` [Symbol] the day component (if component options used)
+#       #   - `:weekday` [Symbol] the weekday component (if component options used)
+#       #   - `:hour` [Symbol] the hour component (if component options used)
+#       #   - `:minute` [Symbol] the minute component (if component options used)
+#       #   - `:second` [Symbol] the second component (if component options used)
 #       #   - `:time_zone` [String] the time zone (if set)
 #       #   - `:hour_cycle` [Symbol] the hour cycle (if set)
 #       #

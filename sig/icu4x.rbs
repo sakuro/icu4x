@@ -70,6 +70,13 @@ module ICU4X
   type time_style = :full | :long | :medium | :short
   type datetime_calendar = :gregory | :japanese | :buddhist | :chinese | :hebrew | :islamic | :persian | :indian | :ethiopian | :coptic | :roc | :dangi
   type hour_cycle = :h11 | :h12 | :h23
+  type year_style = :numeric | :two_digit
+  type month_style = :numeric | :two_digit | :long | :short | :narrow
+  type day_style = :numeric | :two_digit
+  type weekday_style = :long | :short | :narrow
+  type hour_style = :numeric | :two_digit
+  type minute_style = :numeric | :two_digit
+  type second_style = :numeric | :two_digit
 
   class NumberFormat
     def self.new: (
@@ -104,6 +111,13 @@ module ICU4X
       ?provider: DataProvider,
       ?date_style: date_style,
       ?time_style: time_style,
+      ?year: year_style,
+      ?month: month_style,
+      ?day: day_style,
+      ?weekday: weekday_style,
+      ?hour: hour_style,
+      ?minute: minute_style,
+      ?second: second_style,
       ?time_zone: String,
       ?calendar: datetime_calendar,
       ?hour_cycle: hour_cycle
@@ -116,6 +130,13 @@ module ICU4X
       calendar: datetime_calendar,
       ?date_style: date_style,
       ?time_style: time_style,
+      ?year: year_style,
+      ?month: month_style,
+      ?day: day_style,
+      ?weekday: weekday_style,
+      ?hour: hour_style,
+      ?minute: minute_style,
+      ?second: second_style,
       ?time_zone: String,
       ?hour_cycle: hour_cycle
     }

@@ -21,9 +21,18 @@ This document tracks which JavaScript Intl API options are supported in ICU4X Ru
 |--------|--------|
 | `date_style` | `:full`, `:long`, `:medium`, `:short` |
 | `time_style` | `:full`, `:long`, `:medium`, `:short` |
+| `year` | `:numeric`, `:two_digit` |
+| `month` | `:numeric`, `:two_digit`, `:long`, `:short`, `:narrow` |
+| `day` | `:numeric`, `:two_digit` |
+| `weekday` | `:long`, `:short`, `:narrow` |
+| `hour` | `:numeric`, `:two_digit` |
+| `minute` | `:numeric`, `:two_digit` |
+| `second` | `:numeric`, `:two_digit` |
 | `time_zone` | IANA timezone name |
 | `calendar` | `:gregory`, `:japanese`, `:buddhist`, etc. |
 | `hour_cycle` | `:h11`, `:h12`, `:h23` |
+
+**Note:** Style options (`date_style`, `time_style`) and component options (`year`, `month`, `day`, etc.) are mutually exclusive.
 
 ### Supported Methods
 
@@ -35,7 +44,6 @@ This document tracks which JavaScript Intl API options are supported in ICU4X Ru
 | Option | Intl Feature | Status |
 |--------|-------------|--------|
 | `day_period` | AM/PM display style | Possible |
-| Component options | Individual field control (year, month, day, etc.) | Experimental |
 
 ### Numbering System
 
@@ -188,14 +196,10 @@ rtf.format(-3, :day)  # => "三 日前"
 
 ## Implementation Priority
 
-### Medium Priority (Experimental Features)
-
-1. **DateTimeFormat component options** - Experimental but in demand
-
 ### Low Priority (Waiting for ICU4X)
 
-2. **NumberFormat extensions** - Waiting for ICU4X #6804 (currency_display, unit, compact, etc.)
-3. **DisplayNames additional types** - Blocked (currency, calendar, date_time_field not in ICU4X displaynames module)
+1. **NumberFormat extensions** - Waiting for ICU4X #6804 (currency_display, unit, compact, etc.)
+2. **DisplayNames additional types** - Blocked (currency, calendar, date_time_field not in ICU4X displaynames module)
 
 ---
 
