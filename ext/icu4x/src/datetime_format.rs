@@ -329,13 +329,20 @@ impl DateTimeFormat {
             ));
         }
 
-        // At least one of date_style, time_style, or component options must be specified
-        if !has_style_options && !has_component_options {
-            return Err(Error::new(
-                ruby.exception_arg_error(),
-                "at least one of date_style, time_style, or component options (year, month, day, etc.) must be specified",
-            ));
-        }
+        // Apply default component options if no options specified
+        // Default: year: :numeric, month: :numeric, day: :numeric
+        // This matches JavaScript Intl.DateTimeFormat default behavior
+        let component_options = if !has_style_options && !has_component_options {
+            ComponentOptions {
+                year: Some(YearStyle::Numeric),
+                month: Some(MonthStyle::Numeric),
+                day: Some(DayStyle::Numeric),
+                ..Default::default()
+            }
+        } else {
+            component_options
+        };
+        let has_component_options = !component_options.is_empty();
 
         // Extract time_zone option and parse it
         let time_zone: Option<String> =

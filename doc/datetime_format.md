@@ -67,7 +67,20 @@ There are two ways to specify which date/time components to include:
 1. **Style options** (`date_style`, `time_style`) - Use predefined formatting patterns
 2. **Component options** (`year`, `month`, `day`, `weekday`, `hour`, `minute`, `second`) - Specify individual components
 
-At least one style option or component option must be specified. You can use `date_style` and `time_style` together, or combine multiple component options, but **style options and component options cannot be mixed** in the same formatter.
+You can use `date_style` and `time_style` together, or combine multiple component options, but **style options and component options cannot be mixed** in the same formatter.
+
+#### Default Behavior (No Options)
+
+When no options are specified, the formatter uses default component options equivalent to `year: :numeric, month: :numeric, day: :numeric`. This matches JavaScript's `Intl.DateTimeFormat` default behavior.
+
+```ruby
+dtf = ICU4X::DateTimeFormat.new(locale)
+dtf.format(Time.utc(2025, 2, 1))
+# => "2/1/25" (en-US)
+# => "2025/02/01" (ja-JP)
+```
+
+**Note:** The output format may differ slightly from JavaScript Intl due to ICU4X/CLDR pattern differences. See [Limitation: Default format differs from Intl](#limitation-default-format-differs-from-intl) for details.
 
 #### date_style / time_style
 
@@ -417,3 +430,16 @@ If you need abbreviated month names in English-like locales, consider:
 1. Using `date_style: :medium` instead of component options
 2. Post-processing the output if abbreviation is critical
 
+### Limitation: Default format differs from Intl
+
+When no options are specified, the default format may differ from JavaScript's `Intl.DateTimeFormat`:
+
+| Locale | ICU4X Ruby (default) | JavaScript Intl (default) |
+|--------|---------------------|---------------------------|
+| en-US | "2/1/25" | "2/1/2025" |
+| ja-JP | "2025/02/01" | "2025/2/1" |
+| de-DE | "01.02.25" | "1.2.2025" |
+
+This difference occurs because ICU4X uses CLDR's "short" date pattern for numeric-only formats, which typically includes 2-digit years and zero-padding in some locales. JavaScript Intl uses a different pattern that produces 4-digit years without padding.
+
+This appears to be a difference in how ICU4X and Intl interpret default formatting, and may not be addressable at the gem level.
