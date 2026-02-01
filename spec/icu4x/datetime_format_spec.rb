@@ -62,9 +62,49 @@ RSpec.describe ICU4X::DateTimeFormat do
           .to raise_error(TypeError, /provider must be a DataProvider/)
       end
 
-      it "raises ArgumentError when neither date_style nor time_style is specified" do
+      it "raises ArgumentError when neither style nor component options are specified" do
         expect { ICU4X::DateTimeFormat.new(locale, provider:) }
-          .to raise_error(ArgumentError, /at least one of date_style or time_style must be specified/)
+          .to raise_error(ArgumentError, /at least one of date_style, time_style, or component options/)
+      end
+
+      it "raises ArgumentError when style and component options are used together" do
+        expect { ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, year: :numeric) }
+          .to raise_error(ArgumentError, %r{cannot use date_style/time_style together with component options})
+      end
+
+      it "raises ArgumentError when year is invalid" do
+        expect { ICU4X::DateTimeFormat.new(locale, provider:, year: :invalid) }
+          .to raise_error(ArgumentError, /year must be :numeric, :two_digit/)
+      end
+
+      it "raises ArgumentError when month is invalid" do
+        expect { ICU4X::DateTimeFormat.new(locale, provider:, month: :invalid) }
+          .to raise_error(ArgumentError, /month must be :numeric, :two_digit, :long, :short, :narrow/)
+      end
+
+      it "raises ArgumentError when day is invalid" do
+        expect { ICU4X::DateTimeFormat.new(locale, provider:, day: :invalid) }
+          .to raise_error(ArgumentError, /day must be :numeric, :two_digit/)
+      end
+
+      it "raises ArgumentError when weekday is invalid" do
+        expect { ICU4X::DateTimeFormat.new(locale, provider:, weekday: :invalid) }
+          .to raise_error(ArgumentError, /weekday must be :long, :short, :narrow/)
+      end
+
+      it "raises ArgumentError when hour is invalid" do
+        expect { ICU4X::DateTimeFormat.new(locale, provider:, hour: :invalid) }
+          .to raise_error(ArgumentError, /hour must be :numeric, :two_digit/)
+      end
+
+      it "raises ArgumentError when minute is invalid" do
+        expect { ICU4X::DateTimeFormat.new(locale, provider:, minute: :invalid) }
+          .to raise_error(ArgumentError, /minute must be :numeric, :two_digit/)
+      end
+
+      it "raises ArgumentError when second is invalid" do
+        expect { ICU4X::DateTimeFormat.new(locale, provider:, second: :invalid) }
+          .to raise_error(ArgumentError, /second must be :numeric, :two_digit/)
       end
 
       it "raises ArgumentError when date_style is invalid" do
@@ -122,6 +162,70 @@ RSpec.describe ICU4X::DateTimeFormat do
 
       it "creates a DateTimeFormat instance with America/New_York" do
         formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, time_zone: "America/New_York")
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+      end
+    end
+
+    context "with component options" do
+      it "creates with year, month, day" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, year: :numeric, month: :numeric, day: :numeric)
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+      end
+
+      it "creates with month, day only" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, month: :long, day: :numeric)
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+      end
+
+      it "creates with month, day, weekday" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, month: :long, day: :numeric, weekday: :long)
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+      end
+
+      it "creates with hour, minute, second" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, hour: :numeric, minute: :numeric, second: :numeric)
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+      end
+
+      it "creates with year, month, day, hour, minute" do
+        formatter = ICU4X::DateTimeFormat.new(
+          locale,
+          provider:,
+          year: :numeric,
+          month: :numeric,
+          day: :numeric,
+          hour: :numeric,
+          minute: :numeric
+        )
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+      end
+
+      it "creates with year only" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, year: :numeric)
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+      end
+
+      it "creates with month only" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, month: :long)
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+      end
+
+      it "creates with weekday only" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, weekday: :long)
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+      end
+
+      it "creates with year, month (no day)" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, year: :numeric, month: :long)
 
         expect(formatter).to be_a(ICU4X::DateTimeFormat)
       end
@@ -323,6 +427,123 @@ RSpec.describe ICU4X::DateTimeFormat do
         expect(result).to include("8:30:00\u202FAM")
       end
     end
+
+    context "with component options" do
+      let(:locale) { ICU4X::Locale.parse("en-US") }
+      let(:time) { Time.utc(2025, 12, 28, 14, 30, 45) }
+
+      it "formats with year, month, day" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, year: :numeric, month: :numeric, day: :numeric)
+
+        result = formatter.format(time)
+
+        # Field Sets use medium style by default
+        expect(result).to eq("Dec 28, 2025")
+      end
+
+      it "formats with month, day" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, month: :long, day: :numeric)
+
+        result = formatter.format(time)
+
+        # Component style hints are not used; Field Set uses medium style
+        expect(result).to eq("Dec 28")
+      end
+
+      it "formats with weekday, month, day" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, weekday: :long, month: :long, day: :numeric)
+
+        result = formatter.format(time)
+
+        # Component style hints are not used; Field Set uses medium style
+        expect(result).to eq("Sun, Dec 28")
+      end
+
+      it "formats with hour, minute, second" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, hour: :numeric, minute: :numeric, second: :numeric)
+
+        result = formatter.format(time)
+
+        expect(result).to include("2")
+        expect(result).to include("30")
+        expect(result).to include("45")
+      end
+
+      it "formats with year, month, day, hour, minute" do
+        formatter = ICU4X::DateTimeFormat.new(
+          locale,
+          provider:,
+          year: :numeric,
+          month: :numeric,
+          day: :numeric,
+          hour: :numeric,
+          minute: :numeric
+        )
+
+        result = formatter.format(time)
+
+        # Field Sets use medium style by default
+        expect(result).to eq("Dec 28, 2025, 2:30:45\u202FPM")
+      end
+
+      it "formats weekday only" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, weekday: :long)
+
+        result = formatter.format(time)
+
+        # Medium style gives abbreviated weekday
+        expect(result).to eq("Sun")
+      end
+
+      it "formats month only" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, month: :long)
+
+        result = formatter.format(time)
+
+        # Medium style gives abbreviated month
+        expect(result).to eq("Dec")
+      end
+
+      it "formats year, month (no day)" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, year: :numeric, month: :long)
+
+        result = formatter.format(time)
+
+        # Medium style for year-month
+        expect(result).to eq("Dec 2025")
+      end
+    end
+
+    context "with component options in Japanese locale" do
+      let(:locale) { ICU4X::Locale.parse("ja-JP") }
+      let(:time) { Time.utc(2025, 12, 28, 14, 30, 45) }
+
+      it "formats with year, month, day in Japanese order" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, year: :numeric, month: :numeric, day: :numeric)
+
+        result = formatter.format(time)
+
+        # Japanese ordering is Y/M/D - medium style
+        expect(result).to eq("2025/12/28")
+      end
+
+      it "formats weekday in Japanese" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, weekday: :long)
+
+        result = formatter.format(time)
+
+        # Medium style gives short weekday in Japanese
+        expect(result).to eq("日")
+      end
+
+      it "formats month in Japanese" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, month: :long)
+
+        result = formatter.format(time)
+
+        expect(result).to include("12")
+      end
+    end
   end
 
   describe "#format with numbering system" do
@@ -499,6 +720,81 @@ RSpec.describe ICU4X::DateTimeFormat do
       formatter = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :short)
 
       expect(formatter.resolved_options).not_to have_key(:hour_cycle)
+    end
+
+    context "with component options" do
+      it "returns year when specified" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, year: :numeric, month: :numeric, day: :numeric)
+
+        expect(formatter.resolved_options).to include(year: :numeric)
+      end
+
+      it "returns month when specified" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, month: :long)
+
+        expect(formatter.resolved_options).to include(month: :long)
+      end
+
+      it "returns day when specified" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, month: :numeric, day: :two_digit)
+
+        expect(formatter.resolved_options).to include(day: :two_digit)
+      end
+
+      it "returns weekday when specified" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, weekday: :long)
+
+        expect(formatter.resolved_options).to include(weekday: :long)
+      end
+
+      it "returns hour when specified" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, hour: :numeric, minute: :numeric)
+
+        expect(formatter.resolved_options).to include(hour: :numeric)
+      end
+
+      it "returns minute when specified" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, hour: :numeric, minute: :two_digit)
+
+        expect(formatter.resolved_options).to include(minute: :two_digit)
+      end
+
+      it "returns second when specified" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, hour: :numeric, minute: :numeric, second: :numeric)
+
+        expect(formatter.resolved_options).to include(second: :numeric)
+      end
+
+      it "returns all component options when all specified" do
+        formatter = ICU4X::DateTimeFormat.new(
+          locale,
+          provider:,
+          year: :numeric,
+          month: :short,
+          day: :numeric,
+          weekday: :short,
+          hour: :numeric,
+          minute: :numeric,
+          second: :numeric
+        )
+
+        expect(formatter.resolved_options).to include(
+          year: :numeric,
+          month: :short,
+          day: :numeric,
+          weekday: :short,
+          hour: :numeric,
+          minute: :numeric,
+          second: :numeric
+        )
+      end
+
+      it "does not return date_style or time_style when using component options" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, year: :numeric, month: :numeric, day: :numeric)
+
+        expect(formatter.resolved_options).not_to have_key(:date_style)
+        expect(formatter.resolved_options).not_to have_key(:time_style)
+      end
     end
   end
 

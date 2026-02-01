@@ -24,14 +24,24 @@ module ICU4X
   class DateTimeFormat
     # Constructor
     # @param locale [Locale] Locale
-    # @param provider [DataProvider] Data provider
+    # @param provider [DataProvider] Data provider (optional if ICU4X_DATA_PATH is set)
     # @param date_style [Symbol, nil] :full, :long, :medium, :short
     # @param time_style [Symbol, nil] :full, :long, :medium, :short
+    # @param year [Symbol, nil] :numeric, :two_digit (component option)
+    # @param month [Symbol, nil] :numeric, :two_digit, :long, :short, :narrow (component option)
+    # @param day [Symbol, nil] :numeric, :two_digit (component option)
+    # @param weekday [Symbol, nil] :long, :short, :narrow (component option)
+    # @param hour [Symbol, nil] :numeric, :two_digit (component option)
+    # @param minute [Symbol, nil] :numeric, :two_digit (component option)
+    # @param second [Symbol, nil] :numeric, :two_digit (component option)
     # @param time_zone [String, nil] IANA timezone name (e.g., "Asia/Tokyo")
     # @param calendar [Symbol] :gregory, :japanese, :buddhist, :chinese, :hebrew, :islamic, :persian, :indian, :ethiopian, :coptic, :roc, :dangi
     # @param hour_cycle [Symbol, nil] :h11 (0-11), :h12 (1-12), :h23 (0-23)
     # @raise [Error] If options are invalid
-    def initialize(locale, provider:, date_style: nil, time_style: nil, time_zone: nil, calendar: nil, hour_cycle: nil) = ...
+    def initialize(locale, provider: nil, date_style: nil, time_style: nil,
+                   year: nil, month: nil, day: nil, weekday: nil,
+                   hour: nil, minute: nil, second: nil,
+                   time_zone: nil, calendar: nil, hour_cycle: nil) = ...
 
     # Format a time
     # @param time [Time, #to_time] Time to format (or any object responding to #to_time)
@@ -52,9 +62,16 @@ end
 
 ### Option Details
 
+There are two ways to specify which date/time components to include:
+
+1. **Style options** (`date_style`, `time_style`) - Use predefined formatting patterns
+2. **Component options** (`year`, `month`, `day`, `weekday`, `hour`, `minute`, `second`) - Specify individual components
+
+At least one style option or component option must be specified. Style options and component options are **mutually exclusive** - you cannot use both in the same formatter.
+
 #### date_style / time_style
 
-At least one must be specified.
+At least one must be specified when using style options.
 
 | Value | Description | Example (ja-JP) |
 |-------|-------------|------------------|
@@ -119,6 +136,56 @@ dtf = ICU4X::DateTimeFormat.new(
   hour_cycle: :h23
 )
 dtf.format(Time.utc(2025, 1, 1, 0, 30))  # => "00:30:00"
+```
+
+#### Component Options
+
+Component options allow you to specify which date/time fields to include in the output. Unlike JavaScript's `Intl.DateTimeFormat`, component options in this implementation select which fields to include, but the actual format (long/short/numeric) is determined by the underlying ICU4X Field Set, which uses medium style by default.
+
+| Option | Values | Description |
+|--------|--------|-------------|
+| `year` | `:numeric`, `:two_digit` | Include year |
+| `month` | `:numeric`, `:two_digit`, `:long`, `:short`, `:narrow` | Include month |
+| `day` | `:numeric`, `:two_digit` | Include day of month |
+| `weekday` | `:long`, `:short`, `:narrow` | Include day of week |
+| `hour` | `:numeric`, `:two_digit` | Include hour |
+| `minute` | `:numeric`, `:two_digit` | Include minute |
+| `second` | `:numeric`, `:two_digit` | Include second |
+
+**Important notes:**
+- Component options and style options (`date_style`/`time_style`) are mutually exclusive
+- The order of components in the output is determined by the locale (via CLDR data), not by the order of options
+- The specific values (e.g., `:long` vs `:short` for `month`) are hints; the actual format depends on the ICU4X Field Set
+
+```ruby
+# Using component options
+dtf = ICU4X::DateTimeFormat.new(
+  locale,
+  provider: provider,
+  year: :numeric,
+  month: :numeric,
+  day: :numeric
+)
+dtf.format(Time.utc(2025, 12, 28))  # => "Dec 28, 2025" (en-US)
+                                     # => "2025/12/28" (ja-JP)
+
+# Time components only
+dtf = ICU4X::DateTimeFormat.new(
+  locale,
+  provider: provider,
+  hour: :numeric,
+  minute: :numeric
+)
+dtf.format(Time.utc(2025, 12, 28, 14, 30))  # => "2:30:45 PM" (en-US)
+
+# Weekday only
+dtf = ICU4X::DateTimeFormat.new(
+  locale,
+  provider: provider,
+  weekday: :long
+)
+dtf.format(Time.utc(2025, 12, 28))  # => "Sun" (en-US)
+                                     # => "日" (ja-JP)
 ```
 
 ---

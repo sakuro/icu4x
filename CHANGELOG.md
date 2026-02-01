@@ -2,6 +2,7 @@
 
 ### Added
 
+- Component options for `ICU4X::DateTimeFormat` (`year`, `month`, `day`, `weekday`, `hour`, `minute`, `second`) as an alternative to style options (#129)
 - Document numbering system support via BCP 47 locale extensions (`-u-nu-xxx`) for `NumberFormat`, `DateTimeFormat`, and `RelativeTimeFormat` (#127)
 - `hour_cycle` option for `ICU4X::DateTimeFormat` to control 12/24-hour time display (#112)
 - `ICU4X::RelativeTimeFormat#format_to_parts` method for breaking down formatted output into typed parts (#117)
