@@ -572,9 +572,9 @@
 #       # @param time_zone [String, nil] IANA time zone identifier (e.g., "America/New_York")
 #       # @param calendar [Symbol] calendar system to use
 #       # @param hour_cycle [Symbol, nil] hour cycle: `:h11` (0-11), `:h12` (1-12), or `:h23` (0-23)
+#       # @param hour12 [Boolean, nil] `true` for 12-hour format, `false` for 24-hour format
 #       # @return [DateTimeFormat] a new instance
 #       # @raise [ArgumentError] if both style and component options are specified
-#       # @raise [ArgumentError] if neither style nor component options are specified
 #       # @raise [DataError] if data for the locale is unavailable
 #       #
 #       # @example With style options
@@ -583,14 +583,18 @@
 #       # @example With component options
 #       #   formatter = ICU4X::DateTimeFormat.new(locale, year: :numeric, month: :long, day: :numeric)
 #       #
-#       # @example With 24-hour format
+#       # @example With 24-hour format using hour_cycle
 #       #   formatter = ICU4X::DateTimeFormat.new(locale, time_style: :short, hour_cycle: :h23)
 #       #   formatter.format(Time.utc(2025, 1, 1, 0, 30))  #=> "00:30:00"
+#       #
+#       # @example With 12-hour format using hour12
+#       #   formatter = ICU4X::DateTimeFormat.new(locale, time_style: :short, hour12: true)
+#       #   formatter.format(Time.utc(2025, 1, 1, 14, 30))  #=> "2:30:00 PM"
 #       #
 #       def initialize(locale, provider: nil, date_style: nil, time_style: nil,
 #                      year: nil, month: nil, day: nil, weekday: nil,
 #                      hour: nil, minute: nil, second: nil,
-#                      time_zone: nil, calendar: :gregory, hour_cycle: nil); end
+#                      time_zone: nil, calendar: :gregory, hour_cycle: nil, hour12: nil); end
 #
 #       # Formats a time value according to the configured options.
 #       #

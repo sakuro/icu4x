@@ -148,6 +148,20 @@ RSpec.describe ICU4X::DateTimeFormat do
       end
     end
 
+    context "with hour12 option" do
+      it "creates a DateTimeFormat instance with hour12: true" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :short, hour12: true)
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+      end
+
+      it "creates a DateTimeFormat instance with hour12: false" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :short, hour12: false)
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+      end
+    end
+
     context "with valid time_zone" do
       it "creates a DateTimeFormat instance with Asia/Tokyo" do
         formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, time_zone: "Asia/Tokyo")
@@ -411,6 +425,36 @@ RSpec.describe ICU4X::DateTimeFormat do
         result = formatter.format(noon)
 
         expect(result).to eq("12:30:00")
+      end
+    end
+
+    context "with hour12 option" do
+      let(:locale) { ICU4X::Locale.parse("en-US") }
+      let(:afternoon) { Time.utc(2025, 12, 28, 14, 30, 0) }
+
+      it "formats with hour12: true as 12-hour format" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :short, hour12: true)
+
+        result = formatter.format(afternoon)
+
+        expect(result).to eq("2:30:00\u202FPM")
+      end
+
+      it "formats with hour12: false as 24-hour format" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :short, hour12: false)
+
+        result = formatter.format(afternoon)
+
+        expect(result).to eq("14:30:00")
+      end
+
+      it "hour_cycle takes precedence over hour12" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :short, hour_cycle: :h23, hour12: true)
+
+        result = formatter.format(afternoon)
+
+        # hour_cycle: :h23 should override hour12: true
+        expect(result).to eq("14:30:00")
       end
     end
 

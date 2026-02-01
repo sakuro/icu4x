@@ -120,7 +120,8 @@ module ICU4X
       ?second: second_style,
       ?time_zone: String,
       ?calendar: datetime_calendar,
-      ?hour_cycle: hour_cycle
+      ?hour_cycle: hour_cycle,
+      ?hour12: bool
     ) -> DateTimeFormat
 
     def format: (Time time) -> String

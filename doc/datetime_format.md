@@ -37,11 +37,12 @@ module ICU4X
     # @param time_zone [String, nil] IANA timezone name (e.g., "Asia/Tokyo")
     # @param calendar [Symbol] :gregory, :japanese, :buddhist, :chinese, :hebrew, :islamic, :persian, :indian, :ethiopian, :coptic, :roc, :dangi
     # @param hour_cycle [Symbol, nil] :h11 (0-11), :h12 (1-12), :h23 (0-23)
+    # @param hour12 [Boolean, nil] true for 12-hour format, false for 24-hour format
     # @raise [Error] If options are invalid
     def initialize(locale, provider: nil, date_style: nil, time_style: nil,
                    year: nil, month: nil, day: nil, weekday: nil,
                    hour: nil, minute: nil, second: nil,
-                   time_zone: nil, calendar: nil, hour_cycle: nil) = ...
+                   time_zone: nil, calendar: nil, hour_cycle: nil, hour12: nil) = ...
 
     # Format a time
     # @param time [Time, #to_time] Time to format (or any object responding to #to_time)
@@ -149,6 +150,27 @@ dtf = ICU4X::DateTimeFormat.new(
   hour_cycle: :h23
 )
 dtf.format(Time.utc(2025, 1, 1, 0, 30))  # => "00:30:00"
+```
+
+#### hour12
+
+A simpler alternative to `hour_cycle` for toggling between 12-hour and 24-hour formats.
+
+| Value | Description | Equivalent |
+|-------|-------------|------------|
+| `true` | 12-hour format | `hour_cycle: :h12` |
+| `false` | 24-hour format | `hour_cycle: :h23` |
+
+If both `hour12` and `hour_cycle` are specified, `hour_cycle` takes precedence.
+
+```ruby
+# 12-hour format
+dtf = ICU4X::DateTimeFormat.new(locale, time_style: :short, hour12: true)
+dtf.format(Time.utc(2025, 1, 1, 14, 30))  # => "2:30:00 PM"
+
+# 24-hour format
+dtf = ICU4X::DateTimeFormat.new(locale, time_style: :short, hour12: false)
+dtf.format(Time.utc(2025, 1, 1, 14, 30))  # => "14:30:00"
 ```
 
 #### Component Options

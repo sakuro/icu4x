@@ -379,6 +379,16 @@ impl DateTimeFormat {
         let hour_cycle =
             helpers::extract_symbol(ruby, &kwargs, "hour_cycle", HourCycle::from_ruby_symbol)?;
 
+        // Extract hour12 option and convert to hour_cycle if hour_cycle is not specified
+        // hour12: true → :h12, hour12: false → :h23
+        let hour12: Option<bool> = kwargs.lookup::<_, Option<bool>>(ruby.to_symbol("hour12"))?;
+        let hour_cycle = match (hour_cycle, hour12) {
+            (Some(hc), _) => Some(hc), // hour_cycle takes precedence
+            (None, Some(true)) => Some(HourCycle::H12),
+            (None, Some(false)) => Some(HourCycle::H23),
+            (None, None) => None,
+        };
+
         // Get the error exception class
         let error_class = helpers::get_exception_class(ruby, "ICU4X::Error");
 
