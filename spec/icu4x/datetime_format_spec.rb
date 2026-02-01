@@ -518,8 +518,9 @@ RSpec.describe ICU4X::DateTimeFormat do
 
         result = formatter.format(time)
 
-        # month: :short triggers Medium length → abbreviated
-        expect(result).to eq("Dec")
+        # Text-based month options use Long length to ensure proper localized format
+        # (e.g., "2026年2月" in Japanese instead of "2026/02")
+        expect(result).to eq("December")
       end
 
       it "formats with weekday: :short" do
@@ -527,8 +528,8 @@ RSpec.describe ICU4X::DateTimeFormat do
 
         result = formatter.format(time)
 
-        # weekday: :short triggers Medium length → abbreviated
-        expect(result).to eq("Sun")
+        # Text-based weekday options use Long length to ensure proper localized format
+        expect(result).to eq("Sunday")
       end
     end
 

@@ -24,7 +24,7 @@ module ICU4X
   class DateTimeFormat
     # Constructor
     # @param locale [Locale] Locale
-    # @param provider [DataProvider] Data provider (optional if ICU4X_DATA_PATH is set)
+    # @param provider [DataProvider] Data provider
     # @param date_style [Symbol, nil] :full, :long, :medium, :short
     # @param time_style [Symbol, nil] :full, :long, :medium, :short
     # @param year [Symbol, nil] :numeric, :two_digit (component option)
@@ -155,10 +155,7 @@ Component options allow you to specify which date/time fields to include in the 
 **Important notes:**
 - Component options and style options (`date_style`/`time_style`) are mutually exclusive
 - The order of components in the output is determined by the locale (via CLDR data), not by the order of options
-- The format length is determined by the component option values:
-  - `:long` → spelled-out format (e.g., "Sunday", "December")
-  - `:short` → abbreviated format (e.g., "Sun", "Dec")
-  - `:narrow` or numeric options → short/numeric format (e.g., "S", "12")
+- **Text-based month/weekday options** (`:long`, `:short`, `:narrow`) all produce spelled-out formats to ensure proper localized formatting across all locales. See [Limitation: Text-based component options](#limitation-text-based-component-options) for details.
 
 ```ruby
 # All numeric options → short format
@@ -172,7 +169,7 @@ dtf = ICU4X::DateTimeFormat.new(
 dtf.format(Time.utc(2025, 12, 28))  # => "12/28/25" (en-US)
                                      # => "2025/12/28" (ja-JP)
 
-# month: :long → long format
+# month: :long → spelled-out format
 dtf = ICU4X::DateTimeFormat.new(
   locale,
   provider: provider,
@@ -181,7 +178,7 @@ dtf = ICU4X::DateTimeFormat.new(
 )
 dtf.format(Time.utc(2025, 12, 28))  # => "December 28" (en-US)
 
-# weekday: :long → long format
+# weekday: :long → spelled-out format
 dtf = ICU4X::DateTimeFormat.new(
   locale,
   provider: provider,
@@ -190,13 +187,14 @@ dtf = ICU4X::DateTimeFormat.new(
 dtf.format(Time.utc(2025, 12, 28))  # => "Sunday" (en-US)
                                      # => "日曜日" (ja-JP)
 
-# weekday: :short → medium/abbreviated format
+# year: :numeric, month: :short → spelled-out format (proper locale-aware pattern)
 dtf = ICU4X::DateTimeFormat.new(
-  locale,
+  ICU4X::Locale.parse("ja-JP"),
   provider: provider,
-  weekday: :short
+  year: :numeric,
+  month: :short
 )
-dtf.format(Time.utc(2025, 12, 28))  # => "Sun" (en-US)
+dtf.format(Time.utc(2025, 12, 28))  # => "2025年12月" (not "2025/12")
 ```
 
 ---
@@ -393,4 +391,29 @@ Example with Japanese locale and Chinese calendar:
 | ICU4X 2.1.1 | CLDR 48 | 乙巳年十一月9日 (day in Arabic numerals) |
 
 The CLDR data specifies `_numbers: "hanidec"` for Chinese calendar date formats in Japanese locale, indicating that Han decimal numerals (一、二、三...) should be used. However, ICU4X does not apply this numbering system attribute, resulting in Arabic numerals for the day field. This is an ICU4X implementation difference, not a CLDR data issue. This is not controllable at the gem level.
+
+### Limitation: Text-based component options
+
+When using component options with text-based month (`:long`, `:short`, `:narrow`) or weekday (`:long`, `:short`, `:narrow`) values, **all three produce the same spelled-out format**.
+
+| Component | JavaScript Intl | ICU4X Ruby |
+|-----------|-----------------|------------|
+| `month: 'short'` | "Feb" (en-US), "2月" (ja-JP) | "February" (en-US), "2月" (ja-JP) |
+| `month: 'long'` | "February" (en-US), "2月" (ja-JP) | "February" (en-US), "2月" (ja-JP) |
+| `month: 'narrow'` | "F" (en-US), "2月" (ja-JP) | "February" (en-US), "2月" (ja-JP) |
+
+**Why this limitation exists:**
+
+ICU4X's field sets use a single "length" parameter to control the overall format pattern, not individual component widths. When using shorter lengths (medium/short), some locales produce numeric formats instead of text:
+
+- `Length::Medium` in Japanese: "2026/02" (numeric with slashes)
+- `Length::Long` in Japanese: "2026年2月" (text with 年/月)
+
+To ensure proper localized text formatting across all locales (especially non-Latin scripts), this gem uses `Length::Long` whenever text-based month or weekday options are specified.
+
+**Workaround:**
+
+If you need abbreviated month names in English-like locales, consider:
+1. Using `date_style: :medium` instead of component options
+2. Post-processing the output if abbreviation is critical
 

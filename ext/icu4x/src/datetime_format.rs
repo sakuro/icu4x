@@ -138,34 +138,29 @@ impl ComponentOptions {
 
     /// Determine the appropriate ICU4X Length based on component option values.
     ///
-    /// The logic prioritizes the most verbose format:
-    /// - If any component has :long → Length::Long
-    /// - If any text component has :short → Length::Medium
-    /// - If any text component has :narrow → Length::Short
+    /// When text-based month or weekday styles (:long, :short, :narrow) are specified,
+    /// we use Length::Long to ensure the format uses localized text patterns
+    /// (e.g., "2026年2月" in Japanese instead of "2026/02").
+    ///
+    /// This matches JavaScript Intl.DateTimeFormat behavior where specifying
+    /// month: "short" produces text-based formats with abbreviated month names,
+    /// not numeric formats.
+    ///
+    /// - If any text-based component (:long, :short, :narrow) → Length::Long
     /// - Default (all numeric) → Length::Short
     fn determine_length(&self) -> Length {
-        // Check for :long in any text component
-        let has_long = matches!(self.month, Some(MonthStyle::Long))
-            || matches!(self.weekday, Some(WeekdayStyle::Long));
+        // Check for any text-based month or weekday option
+        let has_text_month = matches!(
+            self.month,
+            Some(MonthStyle::Long) | Some(MonthStyle::Short) | Some(MonthStyle::Narrow)
+        );
+        let has_text_weekday = matches!(
+            self.weekday,
+            Some(WeekdayStyle::Long) | Some(WeekdayStyle::Short) | Some(WeekdayStyle::Narrow)
+        );
 
-        if has_long {
+        if has_text_month || has_text_weekday {
             return Length::Long;
-        }
-
-        // Check for :short in any text component
-        let has_short = matches!(self.month, Some(MonthStyle::Short))
-            || matches!(self.weekday, Some(WeekdayStyle::Short));
-
-        if has_short {
-            return Length::Medium;
-        }
-
-        // Check for :narrow in any text component
-        let has_narrow = matches!(self.month, Some(MonthStyle::Narrow))
-            || matches!(self.weekday, Some(WeekdayStyle::Narrow));
-
-        if has_narrow {
-            return Length::Short;
         }
 
         // Default for numeric-only options
