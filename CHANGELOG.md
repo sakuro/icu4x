@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.9.0] - 2026-02-01
+
 ### Added
 
 - `hour12` option for `ICU4X::DateTimeFormat` as a simpler alternative to `hour_cycle` (#132)
