@@ -67,7 +67,7 @@ There are two ways to specify which date/time components to include:
 1. **Style options** (`date_style`, `time_style`) - Use predefined formatting patterns
 2. **Component options** (`year`, `month`, `day`, `weekday`, `hour`, `minute`, `second`) - Specify individual components
 
-At least one style option or component option must be specified. Style options and component options are **mutually exclusive** - you cannot use both in the same formatter.
+At least one style option or component option must be specified. You can use `date_style` and `time_style` together, or combine multiple component options, but **style options and component options cannot be mixed** in the same formatter.
 
 #### date_style / time_style
 
@@ -153,7 +153,7 @@ Component options allow you to specify which date/time fields to include in the 
 | `second` | `:numeric`, `:two_digit` | Include second |
 
 **Important notes:**
-- Component options and style options (`date_style`/`time_style`) are mutually exclusive
+- Component options and style options (`date_style`/`time_style`) cannot be mixed
 - The order of components in the output is determined by the locale (via CLDR data), not by the order of options
 - **Text-based month/weekday options** (`:long`, `:short`, `:narrow`) all produce spelled-out formats to ensure proper localized formatting across all locales. See [Limitation: Text-based component options](#limitation-text-based-component-options) for details.
 
