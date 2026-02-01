@@ -2,6 +2,7 @@
 
 ### Added
 
+- `hour12` option for `ICU4X::DateTimeFormat` as a simpler alternative to `hour_cycle` (#132)
 - Default behavior for `ICU4X::DateTimeFormat` when no options specified, matching JavaScript Intl.DateTimeFormat (#130)
 - Component options for `ICU4X::DateTimeFormat` (`year`, `month`, `day`, `weekday`, `hour`, `minute`, `second`) as an alternative to style options (#129)
 - Document numbering system support via BCP 47 locale extensions (`-u-nu-xxx`) for `NumberFormat`, `DateTimeFormat`, and `RelativeTimeFormat` (#127)
