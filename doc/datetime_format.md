@@ -27,11 +27,21 @@ module ICU4X
     # @param provider [DataProvider] Data provider
     # @param date_style [Symbol, nil] :full, :long, :medium, :short
     # @param time_style [Symbol, nil] :full, :long, :medium, :short
+    # @param year [Symbol, nil] :numeric, :two_digit (component option)
+    # @param month [Symbol, nil] :numeric, :two_digit, :long, :short, :narrow (component option)
+    # @param day [Symbol, nil] :numeric, :two_digit (component option)
+    # @param weekday [Symbol, nil] :long, :short, :narrow (component option)
+    # @param hour [Symbol, nil] :numeric, :two_digit (component option)
+    # @param minute [Symbol, nil] :numeric, :two_digit (component option)
+    # @param second [Symbol, nil] :numeric, :two_digit (component option)
     # @param time_zone [String, nil] IANA timezone name (e.g., "Asia/Tokyo")
     # @param calendar [Symbol] :gregory, :japanese, :buddhist, :chinese, :hebrew, :islamic, :persian, :indian, :ethiopian, :coptic, :roc, :dangi
     # @param hour_cycle [Symbol, nil] :h11 (0-11), :h12 (1-12), :h23 (0-23)
     # @raise [Error] If options are invalid
-    def initialize(locale, provider:, date_style: nil, time_style: nil, time_zone: nil, calendar: nil, hour_cycle: nil) = ...
+    def initialize(locale, provider: nil, date_style: nil, time_style: nil,
+                   year: nil, month: nil, day: nil, weekday: nil,
+                   hour: nil, minute: nil, second: nil,
+                   time_zone: nil, calendar: nil, hour_cycle: nil) = ...
 
     # Format a time
     # @param time [Time, #to_time] Time to format (or any object responding to #to_time)
@@ -52,9 +62,16 @@ end
 
 ### Option Details
 
+There are two ways to specify which date/time components to include:
+
+1. **Style options** (`date_style`, `time_style`) - Use predefined formatting patterns
+2. **Component options** (`year`, `month`, `day`, `weekday`, `hour`, `minute`, `second`) - Specify individual components
+
+At least one style option or component option must be specified. You can use `date_style` and `time_style` together, or combine multiple component options, but **style options and component options cannot be mixed** in the same formatter.
+
 #### date_style / time_style
 
-At least one must be specified.
+At least one must be specified when using style options.
 
 | Value | Description | Example (ja-JP) |
 |-------|-------------|------------------|
@@ -119,6 +136,65 @@ dtf = ICU4X::DateTimeFormat.new(
   hour_cycle: :h23
 )
 dtf.format(Time.utc(2025, 1, 1, 0, 30))  # => "00:30:00"
+```
+
+#### Component Options
+
+Component options allow you to specify which date/time fields to include in the output, similar to JavaScript's `Intl.DateTimeFormat`.
+
+| Option | Values | Description |
+|--------|--------|-------------|
+| `year` | `:numeric`, `:two_digit` | Include year |
+| `month` | `:numeric`, `:two_digit`, `:long`, `:short`, `:narrow` | Include month |
+| `day` | `:numeric`, `:two_digit` | Include day of month |
+| `weekday` | `:long`, `:short`, `:narrow` | Include day of week |
+| `hour` | `:numeric`, `:two_digit` | Include hour |
+| `minute` | `:numeric`, `:two_digit` | Include minute |
+| `second` | `:numeric`, `:two_digit` | Include second |
+
+**Important notes:**
+- Component options and style options (`date_style`/`time_style`) cannot be mixed
+- The order of components in the output is determined by the locale (via CLDR data), not by the order of options
+- **Text-based month/weekday options** (`:long`, `:short`, `:narrow`) all produce spelled-out formats to ensure proper localized formatting across all locales. See [Limitation: Text-based component options](#limitation-text-based-component-options) for details.
+
+```ruby
+# All numeric options → short format
+dtf = ICU4X::DateTimeFormat.new(
+  locale,
+  provider: provider,
+  year: :numeric,
+  month: :numeric,
+  day: :numeric
+)
+dtf.format(Time.utc(2025, 12, 28))  # => "12/28/25" (en-US)
+                                     # => "2025/12/28" (ja-JP)
+
+# month: :long → spelled-out format
+dtf = ICU4X::DateTimeFormat.new(
+  locale,
+  provider: provider,
+  month: :long,
+  day: :numeric
+)
+dtf.format(Time.utc(2025, 12, 28))  # => "December 28" (en-US)
+
+# weekday: :long → spelled-out format
+dtf = ICU4X::DateTimeFormat.new(
+  locale,
+  provider: provider,
+  weekday: :long
+)
+dtf.format(Time.utc(2025, 12, 28))  # => "Sunday" (en-US)
+                                     # => "日曜日" (ja-JP)
+
+# year: :numeric, month: :short → spelled-out format (proper locale-aware pattern)
+dtf = ICU4X::DateTimeFormat.new(
+  ICU4X::Locale.parse("ja-JP"),
+  provider: provider,
+  year: :numeric,
+  month: :short
+)
+dtf.format(Time.utc(2025, 12, 28))  # => "2025年12月" (not "2025/12")
 ```
 
 ---
@@ -315,4 +391,29 @@ Example with Japanese locale and Chinese calendar:
 | ICU4X 2.1.1 | CLDR 48 | 乙巳年十一月9日 (day in Arabic numerals) |
 
 The CLDR data specifies `_numbers: "hanidec"` for Chinese calendar date formats in Japanese locale, indicating that Han decimal numerals (一、二、三...) should be used. However, ICU4X does not apply this numbering system attribute, resulting in Arabic numerals for the day field. This is an ICU4X implementation difference, not a CLDR data issue. This is not controllable at the gem level.
+
+### Limitation: Text-based component options
+
+When using component options with text-based month (`:long`, `:short`, `:narrow`) or weekday (`:long`, `:short`, `:narrow`) values, **all three produce the same spelled-out format**.
+
+| Component | JavaScript Intl | ICU4X Ruby |
+|-----------|-----------------|------------|
+| `month: 'short'` | "Feb" (en-US), "2月" (ja-JP) | "February" (en-US), "2月" (ja-JP) |
+| `month: 'long'` | "February" (en-US), "2月" (ja-JP) | "February" (en-US), "2月" (ja-JP) |
+| `month: 'narrow'` | "F" (en-US), "2月" (ja-JP) | "February" (en-US), "2月" (ja-JP) |
+
+**Why this limitation exists:**
+
+ICU4X's field sets use a single "length" parameter to control the overall format pattern, not individual component widths. When using shorter lengths (medium/short), some locales produce numeric formats instead of text:
+
+- `Length::Medium` in Japanese: "2026/02" (numeric with slashes)
+- `Length::Long` in Japanese: "2026年2月" (text with 年/月)
+
+To ensure proper localized text formatting across all locales (especially non-Latin scripts), this gem uses `Length::Long` whenever text-based month or weekday options are specified.
+
+**Workaround:**
+
+If you need abbreviated month names in English-like locales, consider:
+1. Using `date_style: :medium` instead of component options
+2. Post-processing the output if abbreviation is critical
 
