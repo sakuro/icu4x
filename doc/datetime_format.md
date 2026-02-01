@@ -140,7 +140,7 @@ dtf.format(Time.utc(2025, 1, 1, 0, 30))  # => "00:30:00"
 
 #### Component Options
 
-Component options allow you to specify which date/time fields to include in the output. Unlike JavaScript's `Intl.DateTimeFormat`, component options in this implementation select which fields to include, but the actual format (long/short/numeric) is determined by the underlying ICU4X Field Set, which uses medium style by default.
+Component options allow you to specify which date/time fields to include in the output, similar to JavaScript's `Intl.DateTimeFormat`.
 
 | Option | Values | Description |
 |--------|--------|-------------|
@@ -155,10 +155,13 @@ Component options allow you to specify which date/time fields to include in the 
 **Important notes:**
 - Component options and style options (`date_style`/`time_style`) are mutually exclusive
 - The order of components in the output is determined by the locale (via CLDR data), not by the order of options
-- The specific values (e.g., `:long` vs `:short` for `month`) are hints; the actual format depends on the ICU4X Field Set
+- The format length is determined by the component option values:
+  - `:long` → spelled-out format (e.g., "Sunday", "December")
+  - `:short` → abbreviated format (e.g., "Sun", "Dec")
+  - `:narrow` or numeric options → short/numeric format (e.g., "S", "12")
 
 ```ruby
-# Using component options
+# All numeric options → short format
 dtf = ICU4X::DateTimeFormat.new(
   locale,
   provider: provider,
@@ -166,26 +169,34 @@ dtf = ICU4X::DateTimeFormat.new(
   month: :numeric,
   day: :numeric
 )
-dtf.format(Time.utc(2025, 12, 28))  # => "Dec 28, 2025" (en-US)
+dtf.format(Time.utc(2025, 12, 28))  # => "12/28/25" (en-US)
                                      # => "2025/12/28" (ja-JP)
 
-# Time components only
+# month: :long → long format
 dtf = ICU4X::DateTimeFormat.new(
   locale,
   provider: provider,
-  hour: :numeric,
-  minute: :numeric
+  month: :long,
+  day: :numeric
 )
-dtf.format(Time.utc(2025, 12, 28, 14, 30))  # => "2:30:45 PM" (en-US)
+dtf.format(Time.utc(2025, 12, 28))  # => "December 28" (en-US)
 
-# Weekday only
+# weekday: :long → long format
 dtf = ICU4X::DateTimeFormat.new(
   locale,
   provider: provider,
   weekday: :long
 )
+dtf.format(Time.utc(2025, 12, 28))  # => "Sunday" (en-US)
+                                     # => "日曜日" (ja-JP)
+
+# weekday: :short → medium/abbreviated format
+dtf = ICU4X::DateTimeFormat.new(
+  locale,
+  provider: provider,
+  weekday: :short
+)
 dtf.format(Time.utc(2025, 12, 28))  # => "Sun" (en-US)
-                                     # => "日" (ja-JP)
 ```
 
 ---

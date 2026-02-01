@@ -8,6 +8,7 @@ use icu::datetime::fieldsets::enums::{
     TimeFieldSet,
 };
 use icu::datetime::fieldsets::{self};
+use icu::datetime::options::Length;
 use icu::datetime::input::DateTime;
 use icu::datetime::parts as dt_parts;
 use icu::datetime::{DateTimeFormatter, DateTimeFormatterPreferences};
@@ -133,6 +134,42 @@ impl ComponentOptions {
 
     fn is_empty(&self) -> bool {
         !self.has_date_components() && !self.has_time_components()
+    }
+
+    /// Determine the appropriate ICU4X Length based on component option values.
+    ///
+    /// The logic prioritizes the most verbose format:
+    /// - If any component has :long → Length::Long
+    /// - If any text component has :short → Length::Medium
+    /// - If any text component has :narrow → Length::Short
+    /// - Default (all numeric) → Length::Short
+    fn determine_length(&self) -> Length {
+        // Check for :long in any text component
+        let has_long = matches!(self.month, Some(MonthStyle::Long))
+            || matches!(self.weekday, Some(WeekdayStyle::Long));
+
+        if has_long {
+            return Length::Long;
+        }
+
+        // Check for :short in any text component
+        let has_short = matches!(self.month, Some(MonthStyle::Short))
+            || matches!(self.weekday, Some(WeekdayStyle::Short));
+
+        if has_short {
+            return Length::Medium;
+        }
+
+        // Check for :narrow in any text component
+        let has_narrow = matches!(self.month, Some(MonthStyle::Narrow))
+            || matches!(self.weekday, Some(WeekdayStyle::Narrow));
+
+        if has_narrow {
+            return Length::Short;
+        }
+
+        // Default for numeric-only options
+        Length::Short
     }
 }
 
@@ -424,18 +461,20 @@ impl DateTimeFormat {
     ///
     /// Maps component combinations to appropriate ICU4X Field Sets.
     /// Field Sets determine which components appear; the locale determines their order.
+    /// The length is determined by the component option values (e.g., :long → Long).
     fn create_field_set_from_components(
         ruby: &Ruby,
         opts: &ComponentOptions,
     ) -> Result<CompositeDateTimeFieldSet, Error> {
         let has_date = opts.has_date_components();
         let has_time = opts.has_time_components();
+        let length = opts.determine_length();
 
         match (has_date, has_time) {
             (true, true) => {
                 // Date and time components
                 Ok(CompositeDateTimeFieldSet::DateTime(
-                    DateAndTimeFieldSet::YMDT(fieldsets::YMDT::medium()),
+                    DateAndTimeFieldSet::YMDT(fieldsets::YMDT::for_length(length)),
                 ))
             }
             (true, false) => {
@@ -448,56 +487,56 @@ impl DateTimeFormat {
                 match (has_year, has_month, has_day, has_weekday) {
                     // Year + Month + Day + Weekday
                     (true, true, true, true) => Ok(CompositeDateTimeFieldSet::Date(
-                        DateFieldSet::YMDE(fieldsets::YMDE::medium()),
+                        DateFieldSet::YMDE(fieldsets::YMDE::for_length(length)),
                     )),
                     // Year + Month + Day
                     (true, true, true, false) => Ok(CompositeDateTimeFieldSet::Date(
-                        DateFieldSet::YMD(fieldsets::YMD::medium()),
+                        DateFieldSet::YMD(fieldsets::YMD::for_length(length)),
                     )),
                     // Month + Day + Weekday
                     (false, true, true, true) => Ok(CompositeDateTimeFieldSet::Date(
-                        DateFieldSet::MDE(fieldsets::MDE::medium()),
+                        DateFieldSet::MDE(fieldsets::MDE::for_length(length)),
                     )),
                     // Month + Day
                     (false, true, true, false) => Ok(CompositeDateTimeFieldSet::Date(
-                        DateFieldSet::MD(fieldsets::MD::medium()),
+                        DateFieldSet::MD(fieldsets::MD::for_length(length)),
                     )),
                     // Year + Month (calendar period)
                     (true, true, false, _) => Ok(CompositeDateTimeFieldSet::CalendarPeriod(
-                        CalendarPeriodFieldSet::YM(fieldsets::YM::medium()),
+                        CalendarPeriodFieldSet::YM(fieldsets::YM::for_length(length)),
                     )),
                     // Month only (calendar period)
                     (false, true, false, _) => Ok(CompositeDateTimeFieldSet::CalendarPeriod(
-                        CalendarPeriodFieldSet::M(fieldsets::M::medium()),
+                        CalendarPeriodFieldSet::M(fieldsets::M::for_length(length)),
                     )),
                     // Day + Weekday
                     (false, false, true, true) => Ok(CompositeDateTimeFieldSet::Date(
-                        DateFieldSet::DE(fieldsets::DE::medium()),
+                        DateFieldSet::DE(fieldsets::DE::for_length(length)),
                     )),
                     // Day only
                     (false, false, true, false) => Ok(CompositeDateTimeFieldSet::Date(
-                        DateFieldSet::D(fieldsets::D::medium()),
+                        DateFieldSet::D(fieldsets::D::for_length(length)),
                     )),
                     // Weekday only
                     (false, false, false, true) => Ok(CompositeDateTimeFieldSet::Date(
-                        DateFieldSet::E(fieldsets::E::medium()),
+                        DateFieldSet::E(fieldsets::E::for_length(length)),
                     )),
                     // Year only (calendar period)
                     (true, false, false, _) => Ok(CompositeDateTimeFieldSet::CalendarPeriod(
-                        CalendarPeriodFieldSet::Y(fieldsets::Y::medium()),
+                        CalendarPeriodFieldSet::Y(fieldsets::Y::for_length(length)),
                     )),
                     // Year + Day (not a standard combination, use YMD as fallback)
                     (true, false, true, _) => Ok(CompositeDateTimeFieldSet::Date(
-                        DateFieldSet::YMD(fieldsets::YMD::medium()),
+                        DateFieldSet::YMD(fieldsets::YMD::for_length(length)),
                     )),
                     // Should not happen - we checked has_date_components
                     (false, false, false, false) => unreachable!(),
                 }
             }
             (false, true) => {
-                // Time only
+                // Time only - use medium as default since time components are always numeric
                 Ok(CompositeDateTimeFieldSet::Time(TimeFieldSet::T(
-                    fieldsets::T::medium(),
+                    fieldsets::T::for_length(length),
                 )))
             }
             (false, false) => Err(Error::new(

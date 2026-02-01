@@ -432,31 +432,31 @@ RSpec.describe ICU4X::DateTimeFormat do
       let(:locale) { ICU4X::Locale.parse("en-US") }
       let(:time) { Time.utc(2025, 12, 28, 14, 30, 45) }
 
-      it "formats with year, month, day" do
+      it "formats with year, month, day (all numeric)" do
         formatter = ICU4X::DateTimeFormat.new(locale, provider:, year: :numeric, month: :numeric, day: :numeric)
 
         result = formatter.format(time)
 
-        # Field Sets use medium style by default
-        expect(result).to eq("Dec 28, 2025")
+        # All numeric options use Short length
+        expect(result).to eq("12/28/25")
       end
 
-      it "formats with month, day" do
+      it "formats with month: :long, day: :numeric" do
         formatter = ICU4X::DateTimeFormat.new(locale, provider:, month: :long, day: :numeric)
 
         result = formatter.format(time)
 
-        # Component style hints are not used; Field Set uses medium style
-        expect(result).to eq("Dec 28")
+        # month: :long triggers Long length
+        expect(result).to eq("December 28")
       end
 
-      it "formats with weekday, month, day" do
+      it "formats with weekday: :long, month: :long, day: :numeric" do
         formatter = ICU4X::DateTimeFormat.new(locale, provider:, weekday: :long, month: :long, day: :numeric)
 
         result = formatter.format(time)
 
-        # Component style hints are not used; Field Set uses medium style
-        expect(result).to eq("Sun, Dec 28")
+        # weekday: :long and month: :long trigger Long length
+        expect(result).to eq("Sunday, December 28")
       end
 
       it "formats with hour, minute, second" do
@@ -469,7 +469,7 @@ RSpec.describe ICU4X::DateTimeFormat do
         expect(result).to include("45")
       end
 
-      it "formats with year, month, day, hour, minute" do
+      it "formats with year, month, day, hour, minute (all numeric)" do
         formatter = ICU4X::DateTimeFormat.new(
           locale,
           provider:,
@@ -482,35 +482,53 @@ RSpec.describe ICU4X::DateTimeFormat do
 
         result = formatter.format(time)
 
-        # Field Sets use medium style by default
-        expect(result).to eq("Dec 28, 2025, 2:30:45\u202FPM")
+        # All numeric options use Short length
+        expect(result).to eq("12/28/25, 2:30:45\u202FPM")
       end
 
-      it "formats weekday only" do
+      it "formats with weekday: :long" do
         formatter = ICU4X::DateTimeFormat.new(locale, provider:, weekday: :long)
 
         result = formatter.format(time)
 
-        # Medium style gives abbreviated weekday
-        expect(result).to eq("Sun")
+        # weekday: :long triggers Long length → "Sunday"
+        expect(result).to eq("Sunday")
       end
 
-      it "formats month only" do
+      it "formats with month: :long" do
         formatter = ICU4X::DateTimeFormat.new(locale, provider:, month: :long)
 
         result = formatter.format(time)
 
-        # Medium style gives abbreviated month
-        expect(result).to eq("Dec")
+        # month: :long triggers Long length → "December"
+        expect(result).to eq("December")
       end
 
-      it "formats year, month (no day)" do
+      it "formats with year: :numeric, month: :long" do
         formatter = ICU4X::DateTimeFormat.new(locale, provider:, year: :numeric, month: :long)
 
         result = formatter.format(time)
 
-        # Medium style for year-month
-        expect(result).to eq("Dec 2025")
+        # month: :long triggers Long length
+        expect(result).to eq("December 2025")
+      end
+
+      it "formats with month: :short" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, month: :short)
+
+        result = formatter.format(time)
+
+        # month: :short triggers Medium length → abbreviated
+        expect(result).to eq("Dec")
+      end
+
+      it "formats with weekday: :short" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, weekday: :short)
+
+        result = formatter.format(time)
+
+        # weekday: :short triggers Medium length → abbreviated
+        expect(result).to eq("Sun")
       end
     end
 
@@ -518,29 +536,30 @@ RSpec.describe ICU4X::DateTimeFormat do
       let(:locale) { ICU4X::Locale.parse("ja-JP") }
       let(:time) { Time.utc(2025, 12, 28, 14, 30, 45) }
 
-      it "formats with year, month, day in Japanese order" do
+      it "formats with year, month, day (all numeric)" do
         formatter = ICU4X::DateTimeFormat.new(locale, provider:, year: :numeric, month: :numeric, day: :numeric)
 
         result = formatter.format(time)
 
-        # Japanese ordering is Y/M/D - medium style
+        # All numeric options use Short length
         expect(result).to eq("2025/12/28")
       end
 
-      it "formats weekday in Japanese" do
+      it "formats with weekday: :long in Japanese" do
         formatter = ICU4X::DateTimeFormat.new(locale, provider:, weekday: :long)
 
         result = formatter.format(time)
 
-        # Medium style gives short weekday in Japanese
-        expect(result).to eq("日")
+        # weekday: :long triggers Long length → "日曜日"
+        expect(result).to eq("日曜日")
       end
 
-      it "formats month in Japanese" do
+      it "formats with month: :long in Japanese" do
         formatter = ICU4X::DateTimeFormat.new(locale, provider:, month: :long)
 
         result = formatter.format(time)
 
+        # month: :long triggers Long length
         expect(result).to include("12")
       end
     end
