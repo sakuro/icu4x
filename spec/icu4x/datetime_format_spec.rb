@@ -62,11 +62,6 @@ RSpec.describe ICU4X::DateTimeFormat do
           .to raise_error(TypeError, /provider must be a DataProvider/)
       end
 
-      it "raises ArgumentError when neither style nor component options are specified" do
-        expect { ICU4X::DateTimeFormat.new(locale, provider:) }
-          .to raise_error(ArgumentError, /at least one of date_style, time_style, or component options/)
-      end
-
       it "raises ArgumentError when style and component options are used together" do
         expect { ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, year: :numeric) }
           .to raise_error(ArgumentError, %r{cannot use date_style/time_style together with component options})
@@ -228,6 +223,38 @@ RSpec.describe ICU4X::DateTimeFormat do
         formatter = ICU4X::DateTimeFormat.new(locale, provider:, year: :numeric, month: :long)
 
         expect(formatter).to be_a(ICU4X::DateTimeFormat)
+      end
+    end
+
+    context "with no options (default behavior)" do
+      it "creates with default component options" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:)
+
+        expect(formatter).to be_a(ICU4X::DateTimeFormat)
+      end
+
+      it "uses year, month, day as default components" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:)
+
+        options = formatter.resolved_options
+        expect(options).to include(year: :numeric, month: :numeric, day: :numeric)
+      end
+
+      it "does not include time components by default" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:)
+
+        options = formatter.resolved_options
+        expect(options).not_to have_key(:hour)
+        expect(options).not_to have_key(:minute)
+        expect(options).not_to have_key(:second)
+      end
+
+      it "does not include style options when using defaults" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:)
+
+        options = formatter.resolved_options
+        expect(options).not_to have_key(:date_style)
+        expect(options).not_to have_key(:time_style)
       end
     end
   end
@@ -562,6 +589,40 @@ RSpec.describe ICU4X::DateTimeFormat do
 
         # month: :long triggers Long length
         expect(result).to include("12")
+      end
+    end
+
+    context "with default behavior (no options)" do
+      let(:time) { Time.utc(2025, 2, 1) }
+
+      it "formats with en-US locale" do
+        locale = ICU4X::Locale.parse("en-US")
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:)
+
+        result = formatter.format(time)
+
+        # Default uses year: :numeric, month: :numeric, day: :numeric with Short length
+        expect(result).to eq("2/1/25")
+      end
+
+      it "formats with ja-JP locale" do
+        locale = ICU4X::Locale.parse("ja-JP")
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:)
+
+        result = formatter.format(time)
+
+        # Default uses year: :numeric, month: :numeric, day: :numeric with Short length
+        expect(result).to eq("2025/02/01")
+      end
+
+      it "formats with de-DE locale" do
+        locale = ICU4X::Locale.parse("de-DE")
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:)
+
+        result = formatter.format(time)
+
+        # Default uses year: :numeric, month: :numeric, day: :numeric with Short length
+        expect(result).to eq("01.02.25")
       end
     end
   end
