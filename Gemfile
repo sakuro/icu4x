@@ -8,7 +8,6 @@ group :development, :test do
   gem "rake", require: false
   gem "rake-compiler", require: false
 
-  gem "irb", require: false
   gem "repl_type_completor", require: false
 end
 
