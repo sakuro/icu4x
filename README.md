@@ -114,7 +114,7 @@ lf.format(%w[Apple Banana Cherry])
 # Relative time formatting
 rtf = ICU4X::RelativeTimeFormat.new(locale, provider:)
 rtf.format(-3, :day)
-# => "3日前"
+# => "3 日前"
 
 # Display names
 dn = ICU4X::DisplayNames.new(locale, provider:, type: :language)

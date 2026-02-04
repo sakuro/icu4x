@@ -255,13 +255,13 @@ RSpec.describe ICU4X::RelativeTimeFormat do
       it "formats past time in Japanese" do
         result = rtf.format(-3, :day)
 
-        expect(result).to include("3")
+        expect(result).to eq("3 日前")
       end
 
       it "formats future time in Japanese" do
         result = rtf.format(1, :week)
 
-        expect(result).to include("1")
+        expect(result).to eq("1 週間後")
       end
     end
 
