@@ -52,15 +52,9 @@ module ICU4X
 
   # Error raised when data generation fails
   class DataGeneratorError < Error; end
-end
 
-# Define FormattedPart data class for format_to_parts methods
-module ICU4X
   FormattedPart = Data.define(:type, :value)
-end
 
-# Enhance the FormattedPart data class
-module ICU4X
   # Represents a part of a formatted string.
   #
   # Used by format_to_parts methods in DateTimeFormat, NumberFormat,
@@ -74,18 +68,10 @@ module ICU4X
     # @return [String] Human-readable representation
     def inspect = "#<ICU4X::FormattedPart type=#{type.inspect} value=#{value.inspect}>"
   end
-end
 
-# Define Segment data class for Segmenter
-module ICU4X
   class Segmenter
     Segment = Data.define(:segment, :index, :word_like)
-  end
-end
 
-# Enhance the Segment data class
-module ICU4X
-  class Segmenter
     # Represents a segment of text.
     #
     # @!attribute [r] segment
@@ -100,10 +86,7 @@ module ICU4X
       private :word_like
     end
   end
-end
 
-# Enhance the native Locale class
-module ICU4X
   # Represents a BCP 47 locale identifier.
   class Locale
     # @return [String] Human-readable representation
