@@ -200,6 +200,91 @@ RSpec.describe ICU4X::Locale do
     end
   end
 
+  describe ".from_env" do
+    around do |example|
+      original = ENV.to_h.slice("LC_ALL", "LC_MESSAGES", "LC_COLLATE", "LANG")
+      ENV.delete("LC_ALL")
+      ENV.delete("LC_MESSAGES")
+      ENV.delete("LC_COLLATE")
+      ENV.delete("LANG")
+      example.run
+    ensure
+      original.each {|key, value| ENV[key] = value }
+    end
+
+    it "returns locale from LC_ALL when set" do
+      ENV["LC_ALL"] = "ja_JP.UTF-8"
+      locale = ICU4X::Locale.from_env
+      expect(locale.language).to eq("ja")
+      expect(locale.region).to eq("JP")
+    end
+
+    it "returns locale from LC_{category} when LC_ALL is not set" do
+      ENV["LC_MESSAGES"] = "fr_FR.UTF-8"
+      locale = ICU4X::Locale.from_env
+      expect(locale.language).to eq("fr")
+      expect(locale.region).to eq("FR")
+    end
+
+    it "returns locale from LANG as last resort" do
+      ENV["LANG"] = "de_DE.UTF-8"
+      locale = ICU4X::Locale.from_env
+      expect(locale.language).to eq("de")
+      expect(locale.region).to eq("DE")
+    end
+
+    it "prefers LC_ALL over LC_{category} and LANG" do
+      ENV["LC_ALL"] = "ja_JP.UTF-8"
+      ENV["LC_MESSAGES"] = "fr_FR.UTF-8"
+      ENV["LANG"] = "de_DE.UTF-8"
+      locale = ICU4X::Locale.from_env
+      expect(locale.language).to eq("ja")
+    end
+
+    it "prefers LC_{category} over LANG" do
+      ENV["LC_MESSAGES"] = "fr_FR.UTF-8"
+      ENV["LANG"] = "de_DE.UTF-8"
+      locale = ICU4X::Locale.from_env
+      expect(locale.language).to eq("fr")
+    end
+
+    it "uses the specified category" do
+      ENV["LC_COLLATE"] = "es_ES.UTF-8"
+      locale = ICU4X::Locale.from_env(category: :collate)
+      expect(locale.language).to eq("es")
+      expect(locale.region).to eq("ES")
+    end
+
+    it "falls back to C locale when no environment variables are set" do
+      locale = ICU4X::Locale.from_env
+      expect(locale.to_s).to eq("und")
+    end
+
+    it "skips unparseable values and tries next" do
+      ENV["LC_ALL"] = "invalid@@locale"
+      ENV["LC_MESSAGES"] = "fr_FR.UTF-8"
+      locale = ICU4X::Locale.from_env
+      expect(locale.language).to eq("fr")
+    end
+
+    it "skips nil values" do
+      ENV["LANG"] = "fr_FR.UTF-8"
+      locale = ICU4X::Locale.from_env
+      expect(locale.language).to eq("fr")
+    end
+
+    it "skips empty values" do
+      ENV["LC_ALL"] = ""
+      ENV["LC_MESSAGES"] = "fr_FR.UTF-8"
+      locale = ICU4X::Locale.from_env
+      expect(locale.language).to eq("fr")
+    end
+
+    it "raises ArgumentError for unknown category" do
+      expect { ICU4X::Locale.from_env(category: :unknown) }.to raise_error(ArgumentError, /unknown locale category/)
+    end
+  end
+
   describe "#maximize!" do
     it "expands language to full locale and returns self" do
       locale = ICU4X::Locale.parse("en")

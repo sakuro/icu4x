@@ -89,6 +89,33 @@ module ICU4X
 
   # Represents a BCP 47 locale identifier.
   class Locale
+    POSIX_CATEGORIES = %i[collate ctype messages monetary numeric time].freeze
+    private_constant :POSIX_CATEGORIES
+
+    # Creates a Locale from environment variables.
+    #
+    # Checks LC_ALL, LC_{category}, and LANG in order,
+    # parsing each as a POSIX locale. Falls back to "C" if none are valid.
+    #
+    # @param category [Symbol] POSIX locale category (default: :messages)
+    # @return [Locale]
+    # @raise [ArgumentError] if category is not a valid POSIX category
+    def self.from_env(category: :messages)
+      unless POSIX_CATEGORIES.include?(category)
+        raise ArgumentError, "unknown locale category: #{category.inspect}"
+      end
+
+      env_name = "LC_#{category.to_s.upcase}"
+      [ENV["LC_ALL"], ENV[env_name], ENV["LANG"]].each do |value|
+        next if value.nil? || value.empty?
+
+        return parse_posix(value)
+      rescue LocaleError
+        next
+      end
+      parse_posix("C")
+    end
+
     # @return [String] Human-readable representation
     def inspect = "#<ICU4X::Locale:#{self}>"
 

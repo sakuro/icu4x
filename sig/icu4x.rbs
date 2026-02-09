@@ -35,7 +35,10 @@ module ICU4X
     def self.available_markers: () -> Array[String]
   end
 
+  type locale_category = :collate | :ctype | :messages | :monetary | :numeric | :time
+
   class Locale
+    def self.from_env: (?category: locale_category) -> Locale
     def self.parse_bcp47: (String locale_str) -> Locale
     alias self.parse self.parse_bcp47
     def self.parse_posix: (String posix_str) -> Locale
