@@ -37,6 +37,11 @@ inherit_from: .rubocop_todo.yml
 
 # Project-specific settings
 
+# ENV[] returning nil is intentional for locale environment variable lookup
+Style/FetchEnvVar:
+  Exclude:
+    - lib/icu4x.rb
+
 # Native extension classes appear static from Ruby side but have methods defined in Rust
 Style/StaticClass:
   Exclude:
