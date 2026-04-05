@@ -146,9 +146,8 @@ impl RelativeTimeFormat {
         })?;
 
         // Build formatter options
-        let options = RelativeTimeFormatterOptions {
-            numeric: numeric.to_icu_numeric(),
-        };
+        let mut options = RelativeTimeFormatterOptions::default();
+        options.numeric = numeric.to_icu_numeric();
         let prefs: RelativeTimeFormatterPreferences = (&icu_locale).into();
 
         // Create formatters for all units based on style

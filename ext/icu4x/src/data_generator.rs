@@ -19,7 +19,7 @@ fn marker_lookup() -> &'static HashMap<&'static str, DataMarkerInfo> {
     LOOKUP.get_or_init(|| {
         let mut map = HashMap::new();
         macro_rules! cb {
-            ($($marker_ty:ty:$marker:ident,)+ #[experimental] $($emarker_ty:ty:$emarker:ident,)+) => {
+            ($($marker_ty:ty:$marker:ident,)+ #[unstable] $($emarker_ty:ty:$emarker:ident,)+) => {
                 $(
                     // Add both the full type name and the short marker name
                     map.insert(stringify!($marker_ty), <$marker_ty>::INFO);

@@ -202,7 +202,7 @@ RSpec.describe ICU4X::NumberFormat do
       end
 
       it "formats negative amounts" do
-        expect(formatter.format(-50)).to eq("$-50")
+        expect(formatter.format(-50)).to eq("-$50")
       end
     end
 
