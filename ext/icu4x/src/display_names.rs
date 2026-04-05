@@ -1,8 +1,8 @@
 use crate::data_provider::DataProvider;
 use crate::helpers;
-use icu::experimental::displaynames::{
-    DisplayNamesOptions, Fallback, LanguageDisplayNames, LocaleDisplayNamesFormatter,
-    RegionDisplayNames, ScriptDisplayNames, Style,
+use icu::experimental::displaynames::{DisplayNamesOptions, Fallback, Style};
+use icu::experimental::displaynames::multi::{
+    LanguageDisplayNames, LocaleDisplayNamesFormatter, RegionDisplayNames, ScriptDisplayNames,
 };
 use icu_locale::LanguageIdentifier;
 use icu_provider::buf::AsDeserializingBufferProvider;

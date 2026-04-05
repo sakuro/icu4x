@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+### Changed
+
+- Update ICU4X crates from 2.1 to 2.2 (CLDR 48.2, TZDB 2026a) (#138)
+
 ## [0.9.0] - 2026-02-01
 
 ### Added

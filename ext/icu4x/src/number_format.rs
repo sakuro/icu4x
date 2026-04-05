@@ -298,7 +298,7 @@ impl NumberFormat {
             FormatterKind::Decimal(formatter) => formatter.format(&decimal).to_string(),
             FormatterKind::Percent(formatter) => formatter.format(&decimal).to_string(),
             FormatterKind::Currency(formatter, currency_code) => formatter
-                .format_fixed_decimal(&decimal, *currency_code)
+                .format_fixed_decimal(&decimal, currency_code)
                 .to_string(),
         };
         Ok(formatted)
@@ -331,7 +331,7 @@ impl NumberFormat {
             }
             FormatterKind::Currency(formatter, currency_code) => {
                 formatter
-                    .format_fixed_decimal(&decimal, *currency_code)
+                    .format_fixed_decimal(&decimal, currency_code)
                     .write_to_parts(&mut collector)
                     .map_err(|e| Error::new(ruby.exception_runtime_error(), format!("{}", e)))?;
             }
