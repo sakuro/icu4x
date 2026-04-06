@@ -218,7 +218,7 @@ impl Calendar {
             | AnyCalendarKind::HijriTabularTypeIIThursday
             | AnyCalendarKind::HijriUmmAlQura => Calendar::Islamic,
             AnyCalendarKind::Iso => Calendar::Gregory,
-            AnyCalendarKind::Japanese | AnyCalendarKind::JapaneseExtended => Calendar::Japanese,
+            AnyCalendarKind::Japanese => Calendar::Japanese,
             AnyCalendarKind::Persian => Calendar::Persian,
             AnyCalendarKind::Roc => Calendar::Roc,
             _ => Calendar::Gregory,
