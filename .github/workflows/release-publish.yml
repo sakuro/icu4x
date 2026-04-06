@@ -46,7 +46,7 @@ jobs:
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: "3.2"
+        ruby-version: "3.3"
         bundler-cache: true
 
     - name: Cross-compile gem
@@ -54,7 +54,7 @@ jobs:
       id: cross-gem
       with:
         platform: ${{ matrix.platform }}
-        ruby-versions: "3.2,3.3,3.4,4.0"
+        ruby-versions: "3.3,3.4,4.0"
 
     - name: Upload cross-compiled gem
       uses: actions/upload-artifact@v4
@@ -91,7 +91,7 @@ jobs:
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: "3.2"
+        ruby-version: "3.3"
         bundler-cache: true
 
     - name: Compile native extension

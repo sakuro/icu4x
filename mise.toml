@@ -1,5 +1,5 @@
 [tools]
-ruby = "3.2"
+ruby = "3.3"
 rust = "1.92"
 
 [env]
