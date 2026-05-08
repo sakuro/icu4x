@@ -1,5 +1,16 @@
 ## [Unreleased]
 
+### Added
+
+- `era:` option for `ICU4X::DateTimeFormat` to control era display (`:auto`, `:full`, `:with_era`, `:never`) (#144)
+- Locale variant APIs: `ICU4X::Locale#variants`, `#add_variant!`, `#add_variant`, `#remove_variant!`, `#remove_variant` (#143)
+
+### Fixed
+
+- `hour12: true/false` now maps to `Clock12`/`Clock24` for locale-aware hour cycle preference, not fixed `H12`/`H23` (#145)
+- Declare `bigdecimal` as an explicit runtime dependency (#149)
+- Remove deprecated `AnyCalendarKind::JapaneseExtended` (#141)
+
 ### Changed
 
 - Update ICU4X crates from 2.1 to 2.2 (CLDR 48.2, TZDB 2026a) (#138)
