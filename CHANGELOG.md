@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.10.0] - 2026-05-08
+
 ### Added
 
 - `era:` option for `ICU4X::DateTimeFormat` to control era display (`:auto`, `:full`, `:with_era`, `:never`) (#144)
