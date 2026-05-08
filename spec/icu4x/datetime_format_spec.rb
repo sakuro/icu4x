@@ -1070,4 +1070,92 @@ RSpec.describe ICU4X::DateTimeFormat do
       end
     end
   end
+
+  describe "era option" do
+    let(:locale) { ICU4X::Locale.parse("en-US") }
+    let(:time) { Time.utc(2025, 12, 28) }
+
+    context "with .new" do
+      %i[auto full with_era never].each do |era|
+        it "creates formatter with era: #{era.inspect}" do
+          formatter = ICU4X::DateTimeFormat.new(locale, provider:, year: :numeric, month: :numeric, day: :numeric, era:)
+
+          expect(formatter).to be_a(ICU4X::DateTimeFormat)
+        end
+      end
+
+      it "raises ArgumentError for invalid era value" do
+        expect { ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, era: :invalid) }
+          .to raise_error(ArgumentError, /era must be/)
+      end
+    end
+
+    context "with resolved_options" do
+      %i[auto full with_era never].each do |era|
+        it "returns era: #{era.inspect} when specified" do
+          formatter = ICU4X::DateTimeFormat.new(locale, provider:, year: :numeric, month: :numeric, day: :numeric, era:)
+
+          expect(formatter.resolved_options).to include(era:)
+        end
+      end
+
+      it "does not return era when not specified" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long)
+
+        expect(formatter.resolved_options).not_to have_key(:era)
+      end
+    end
+
+    context "with #format (component options)" do
+      it "formats with era: :with_era including AD for current era" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, year: :numeric, month: :numeric, day: :numeric, era: :with_era)
+
+        result = formatter.format(time)
+
+        expect(result).to eq("12/28/2025 AD")
+      end
+
+      it "formats with era: :full showing full century without era" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, year: :numeric, month: :numeric, day: :numeric, era: :full)
+
+        result = formatter.format(time)
+
+        expect(result).to eq("12/28/2025")
+      end
+
+      it "formats with era: :auto abbreviating year without era" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, year: :numeric, month: :numeric, day: :numeric, era: :auto)
+
+        result = formatter.format(time)
+
+        expect(result).to eq("12/28/25")
+      end
+
+      it "formats with era: :never abbreviating year without era" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, year: :numeric, month: :numeric, day: :numeric, era: :never)
+
+        result = formatter.format(time)
+
+        expect(result).to eq("12/28/25")
+      end
+    end
+
+    context "with #format (date_style)" do
+      it "formats with date_style: :long and era: :with_era including AD" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, era: :with_era)
+
+        result = formatter.format(time)
+
+        expect(result).to eq("December 28, 2025 AD")
+      end
+
+      it "formats with date_style: :long without era when era: :never" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :long, era: :never)
+
+        result = formatter.format(time)
+
+        expect(result).to eq("December 28, 2025")
+      end
+    end
+  end
 end
