@@ -264,6 +264,7 @@ pub struct DateTimeFormat {
     jiff_timezone: Option<TimeZone>,
     calendar: Calendar,
     hour_cycle: Option<HourCycle>,
+    hour12: Option<bool>,
     component_options: Option<ComponentOptions>,
 }
 
@@ -379,15 +380,7 @@ impl DateTimeFormat {
         let hour_cycle =
             helpers::extract_symbol(ruby, &kwargs, "hour_cycle", HourCycle::from_ruby_symbol)?;
 
-        // Extract hour12 option and convert to hour_cycle if hour_cycle is not specified
-        // hour12: true → :h12, hour12: false → :h23
         let hour12: Option<bool> = kwargs.lookup::<_, Option<bool>>(ruby.to_symbol("hour12"))?;
-        let hour_cycle = match (hour_cycle, hour12) {
-            (Some(hc), _) => Some(hc), // hour_cycle takes precedence
-            (None, Some(true)) => Some(HourCycle::H12),
-            (None, Some(false)) => Some(HourCycle::H23),
-            (None, None) => None,
-        };
 
         // Get the error exception class
         let error_class = helpers::get_exception_class(ruby, "ICU4X::Error");
@@ -414,6 +407,8 @@ impl DateTimeFormat {
         }
         if let Some(hc) = hour_cycle {
             prefs.hour_cycle = Some(hc.to_icu_hour_cycle());
+        } else if let Some(h12) = hour12 {
+            prefs.hour_cycle = Some(if h12 { IcuHourCycle::Clock12 } else { IcuHourCycle::Clock24 });
         }
 
         let formatter =
@@ -437,6 +432,7 @@ impl DateTimeFormat {
             jiff_timezone,
             calendar: resolved_calendar,
             hour_cycle,
+            hour12,
             component_options: if has_component_options {
                 Some(component_options)
             } else {
@@ -721,7 +717,7 @@ impl DateTimeFormat {
     /// Get the resolved options
     ///
     /// # Returns
-    /// A hash with :locale, :calendar, :date_style, :time_style, and optionally :time_zone, :hour_cycle
+    /// A hash with :locale, :calendar, :date_style, :time_style, and optionally :time_zone, :hour_cycle, :hour12
     fn resolved_options(&self) -> Result<RHash, Error> {
         let ruby = Ruby::get().expect("Ruby runtime should be available");
         let hash = ruby.hash_new();
@@ -755,6 +751,10 @@ impl DateTimeFormat {
                 ruby.to_symbol("hour_cycle"),
                 ruby.to_symbol(hc.to_symbol_name()),
             )?;
+        }
+
+        if let Some(h12) = self.hour12 {
+            hash.aset(ruby.to_symbol("hour12"), h12)?;
         }
 
         // Add component options if they were used
