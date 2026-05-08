@@ -847,6 +847,26 @@ RSpec.describe ICU4X::DateTimeFormat do
       expect(formatter.resolved_options).not_to have_key(:hour_cycle)
     end
 
+    it "returns hour12 when specified as true" do
+      formatter = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :short, hour12: true)
+
+      expect(formatter.resolved_options).to include(hour12: true)
+      expect(formatter.resolved_options).not_to have_key(:hour_cycle)
+    end
+
+    it "returns hour12 when specified as false" do
+      formatter = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :short, hour12: false)
+
+      expect(formatter.resolved_options).to include(hour12: false)
+      expect(formatter.resolved_options).not_to have_key(:hour_cycle)
+    end
+
+    it "does not return hour12 when not specified" do
+      formatter = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :short)
+
+      expect(formatter.resolved_options).not_to have_key(:hour12)
+    end
+
     context "with component options" do
       it "returns year when specified" do
         formatter = ICU4X::DateTimeFormat.new(locale, provider:, year: :numeric, month: :numeric, day: :numeric)
