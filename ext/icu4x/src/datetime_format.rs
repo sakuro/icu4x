@@ -8,7 +8,7 @@ use icu::datetime::fieldsets::enums::{
     TimeFieldSet,
 };
 use icu::datetime::fieldsets::{self};
-use icu::datetime::options::Length;
+use icu::datetime::options::{Length, YearStyle as IcuYearStyle};
 use icu::datetime::input::DateTime;
 use icu::datetime::parts as dt_parts;
 use icu::datetime::{DateTimeFormatter, DateTimeFormatterPreferences};
@@ -63,6 +63,26 @@ impl HourCycle {
 enum YearStyle {
     Numeric,
     TwoDigit,
+}
+
+/// Era display option
+#[derive(Clone, Copy, PartialEq, Eq, RubySymbol)]
+enum EraStyle {
+    Auto,
+    Full,
+    WithEra,
+    Never,
+}
+
+impl EraStyle {
+    fn to_icu_year_style(self) -> IcuYearStyle {
+        match self {
+            EraStyle::Auto => IcuYearStyle::Auto,
+            EraStyle::Full => IcuYearStyle::Full,
+            EraStyle::WithEra => IcuYearStyle::WithEra,
+            EraStyle::Never => IcuYearStyle::NoEra,
+        }
+    }
 }
 
 /// Month component option
@@ -265,6 +285,7 @@ pub struct DateTimeFormat {
     calendar: Calendar,
     hour_cycle: Option<HourCycle>,
     hour12: Option<bool>,
+    era: Option<EraStyle>,
     component_options: Option<ComponentOptions>,
 }
 
@@ -382,6 +403,10 @@ impl DateTimeFormat {
 
         let hour12: Option<bool> = kwargs.lookup::<_, Option<bool>>(ruby.to_symbol("hour12"))?;
 
+        // Extract era option
+        let era =
+            helpers::extract_symbol(ruby, &kwargs, "era", EraStyle::from_ruby_symbol)?;
+
         // Get the error exception class
         let error_class = helpers::get_exception_class(ruby, "ICU4X::Error");
 
@@ -395,9 +420,9 @@ impl DateTimeFormat {
 
         // Create field set based on options
         let field_set = if has_component_options {
-            Self::create_field_set_from_components(ruby, &component_options)?
+            Self::create_field_set_from_components(ruby, &component_options, era)?
         } else {
-            Self::create_field_set_from_style(date_style, time_style)
+            Self::create_field_set_from_style(date_style, time_style, era)
         };
 
         // Create formatter with calendar and hour_cycle preferences
@@ -433,6 +458,7 @@ impl DateTimeFormat {
             calendar: resolved_calendar,
             hour_cycle,
             hour12,
+            era,
             component_options: if has_component_options {
                 Some(component_options)
             } else {
@@ -473,6 +499,7 @@ impl DateTimeFormat {
     fn create_field_set_from_components(
         ruby: &Ruby,
         opts: &ComponentOptions,
+        era: Option<EraStyle>,
     ) -> Result<CompositeDateTimeFieldSet, Error> {
         let has_date = opts.has_date_components();
         let has_time = opts.has_time_components();
@@ -481,9 +508,9 @@ impl DateTimeFormat {
         match (has_date, has_time) {
             (true, true) => {
                 // Date and time components
-                Ok(CompositeDateTimeFieldSet::DateTime(
-                    DateAndTimeFieldSet::YMDT(fieldsets::YMDT::for_length(length)),
-                ))
+                let fs = fieldsets::YMDT::for_length(length);
+                let fs = if let Some(s) = era { fs.with_year_style(s.to_icu_year_style()) } else { fs };
+                Ok(CompositeDateTimeFieldSet::DateTime(DateAndTimeFieldSet::YMDT(fs)))
             }
             (true, false) => {
                 // Date only - choose field set based on which components are specified
@@ -494,13 +521,17 @@ impl DateTimeFormat {
 
                 match (has_year, has_month, has_day, has_weekday) {
                     // Year + Month + Day + Weekday
-                    (true, true, true, true) => Ok(CompositeDateTimeFieldSet::Date(
-                        DateFieldSet::YMDE(fieldsets::YMDE::for_length(length)),
-                    )),
+                    (true, true, true, true) => {
+                        let fs = fieldsets::YMDE::for_length(length);
+                        let fs = if let Some(s) = era { fs.with_year_style(s.to_icu_year_style()) } else { fs };
+                        Ok(CompositeDateTimeFieldSet::Date(DateFieldSet::YMDE(fs)))
+                    }
                     // Year + Month + Day
-                    (true, true, true, false) => Ok(CompositeDateTimeFieldSet::Date(
-                        DateFieldSet::YMD(fieldsets::YMD::for_length(length)),
-                    )),
+                    (true, true, true, false) => {
+                        let fs = fieldsets::YMD::for_length(length);
+                        let fs = if let Some(s) = era { fs.with_year_style(s.to_icu_year_style()) } else { fs };
+                        Ok(CompositeDateTimeFieldSet::Date(DateFieldSet::YMD(fs)))
+                    }
                     // Month + Day + Weekday
                     (false, true, true, true) => Ok(CompositeDateTimeFieldSet::Date(
                         DateFieldSet::MDE(fieldsets::MDE::for_length(length)),
@@ -510,9 +541,11 @@ impl DateTimeFormat {
                         DateFieldSet::MD(fieldsets::MD::for_length(length)),
                     )),
                     // Year + Month (calendar period)
-                    (true, true, false, _) => Ok(CompositeDateTimeFieldSet::CalendarPeriod(
-                        CalendarPeriodFieldSet::YM(fieldsets::YM::for_length(length)),
-                    )),
+                    (true, true, false, _) => {
+                        let fs = fieldsets::YM::for_length(length);
+                        let fs = if let Some(s) = era { fs.with_year_style(s.to_icu_year_style()) } else { fs };
+                        Ok(CompositeDateTimeFieldSet::CalendarPeriod(CalendarPeriodFieldSet::YM(fs)))
+                    }
                     // Month only (calendar period)
                     (false, true, false, _) => Ok(CompositeDateTimeFieldSet::CalendarPeriod(
                         CalendarPeriodFieldSet::M(fieldsets::M::for_length(length)),
@@ -530,13 +563,17 @@ impl DateTimeFormat {
                         DateFieldSet::E(fieldsets::E::for_length(length)),
                     )),
                     // Year only (calendar period)
-                    (true, false, false, _) => Ok(CompositeDateTimeFieldSet::CalendarPeriod(
-                        CalendarPeriodFieldSet::Y(fieldsets::Y::for_length(length)),
-                    )),
+                    (true, false, false, _) => {
+                        let fs = fieldsets::Y::for_length(length);
+                        let fs = if let Some(s) = era { fs.with_year_style(s.to_icu_year_style()) } else { fs };
+                        Ok(CompositeDateTimeFieldSet::CalendarPeriod(CalendarPeriodFieldSet::Y(fs)))
+                    }
                     // Year + Day (not a standard combination, use YMD as fallback)
-                    (true, false, true, _) => Ok(CompositeDateTimeFieldSet::Date(
-                        DateFieldSet::YMD(fieldsets::YMD::for_length(length)),
-                    )),
+                    (true, false, true, _) => {
+                        let fs = fieldsets::YMD::for_length(length);
+                        let fs = if let Some(s) = era { fs.with_year_style(s.to_icu_year_style()) } else { fs };
+                        Ok(CompositeDateTimeFieldSet::Date(DateFieldSet::YMD(fs)))
+                    }
                     // Should not happen - we checked has_date_components
                     (false, false, false, false) => unreachable!(),
                 }
@@ -558,6 +595,7 @@ impl DateTimeFormat {
     fn create_field_set_from_style(
         date_style: Option<DateStyle>,
         time_style: Option<TimeStyle>,
+        era: Option<EraStyle>,
     ) -> CompositeDateTimeFieldSet {
         match (date_style, time_style) {
             (Some(ds), Some(ts)) => {
@@ -567,6 +605,7 @@ impl DateTimeFormat {
                     (DateStyle::Medium, _) => fieldsets::YMDT::medium(),
                     (DateStyle::Short, _) => fieldsets::YMDT::short(),
                 };
+                let ymdt = if let Some(s) = era { ymdt.with_year_style(s.to_icu_year_style()) } else { ymdt };
                 CompositeDateTimeFieldSet::DateTime(DateAndTimeFieldSet::YMDT(ymdt))
             }
             (Some(ds), None) => {
@@ -576,6 +615,7 @@ impl DateTimeFormat {
                     DateStyle::Medium => fieldsets::YMD::medium(),
                     DateStyle::Short => fieldsets::YMD::short(),
                 };
+                let ymd = if let Some(s) = era { ymd.with_year_style(s.to_icu_year_style()) } else { ymd };
                 CompositeDateTimeFieldSet::Date(DateFieldSet::YMD(ymd))
             }
             (None, Some(ts)) => {
@@ -755,6 +795,13 @@ impl DateTimeFormat {
 
         if let Some(h12) = self.hour12 {
             hash.aset(ruby.to_symbol("hour12"), h12)?;
+        }
+
+        if let Some(era) = self.era {
+            hash.aset(
+                ruby.to_symbol("era"),
+                ruby.to_symbol(era.to_symbol_name()),
+            )?;
         }
 
         // Add component options if they were used
