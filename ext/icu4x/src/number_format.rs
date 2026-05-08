@@ -399,11 +399,7 @@ impl NumberFormat {
 
     /// Check if value is a BigDecimal
     fn is_big_decimal(ruby: &Ruby, value: Value) -> bool {
-        // Try to get BigDecimal class; if bigdecimal is not loaded, return false
-        if let Ok(bigdecimal_class) = ruby.eval::<Value>("defined?(BigDecimal) && BigDecimal") {
-            if bigdecimal_class.is_nil() {
-                return false;
-            }
+        if let Ok(bigdecimal_class) = ruby.eval::<Value>("BigDecimal") {
             if let Ok(class) = magnus::RClass::try_convert(bigdecimal_class) {
                 return value.is_kind_of(class);
             }
