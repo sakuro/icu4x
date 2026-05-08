@@ -43,6 +43,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
   spec.extensions = ["ext/icu4x/extconf.rb"]
 
+  spec.add_dependency "bigdecimal", "~> 4.0"
   spec.add_dependency "dry-configurable", "~> 1.3"
   spec.add_dependency "rb_sys", "~> 0.9", ">= 0.9.124"
 end
