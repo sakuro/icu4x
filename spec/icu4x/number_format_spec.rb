@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "bigdecimal"
 require "pathname"
 
 RSpec.describe ICU4X::NumberFormat do
