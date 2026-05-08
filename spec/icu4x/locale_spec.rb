@@ -389,4 +389,133 @@ RSpec.describe ICU4X::Locale do
       expect(result.to_s).to eq("en")
     end
   end
+
+  describe "#variants" do
+    it "returns empty array when no variants" do
+      locale = ICU4X::Locale.parse("en-US")
+
+      expect(locale.variants).to eq([])
+    end
+
+    it "returns variants as strings" do
+      locale = ICU4X::Locale.parse("en-US-posix")
+
+      expect(locale.variants).to eq(["posix"])
+    end
+
+    it "returns multiple variants in sorted order" do
+      locale = ICU4X::Locale.parse("en-macos-posix")
+
+      expect(locale.variants).to eq(%w[macos posix])
+    end
+  end
+
+  describe "#add_variant!" do
+    it "adds the variant in place and returns self" do
+      locale = ICU4X::Locale.parse("en-US")
+
+      result = locale.add_variant!("posix")
+
+      expect(result).to be(locale)
+      expect(locale.to_s).to eq("en-US-posix")
+    end
+
+    it "returns nil when variant is already present" do
+      locale = ICU4X::Locale.parse("en-US-posix")
+
+      expect(locale.add_variant!("posix")).to be_nil
+      expect(locale.to_s).to eq("en-US-posix")
+    end
+
+    it "maintains sorted order" do
+      locale = ICU4X::Locale.parse("en-posix")
+      locale.add_variant!("macos")
+
+      expect(locale.to_s).to eq("en-macos-posix")
+    end
+
+    it "raises LocaleError for invalid variant" do
+      locale = ICU4X::Locale.parse("en-US")
+
+      expect { locale.add_variant!("!!!") }.to raise_error(ICU4X::LocaleError, /Invalid variant/)
+    end
+  end
+
+  describe "#add_variant" do
+    it "returns a new locale with the variant added" do
+      locale = ICU4X::Locale.parse("en-US")
+
+      result = locale.add_variant("posix")
+
+      expect(result).not_to be(locale)
+      expect(result.to_s).to eq("en-US-posix")
+      expect(locale.to_s).to eq("en-US")
+    end
+
+    it "returns a new locale even when variant is already present" do
+      locale = ICU4X::Locale.parse("en-US-posix")
+
+      result = locale.add_variant("posix")
+
+      expect(result).not_to be(locale)
+      expect(result.to_s).to eq("en-US-posix")
+    end
+
+    it "raises LocaleError for invalid variant" do
+      locale = ICU4X::Locale.parse("en-US")
+
+      expect { locale.add_variant("!!!") }.to raise_error(ICU4X::LocaleError, /Invalid variant/)
+    end
+  end
+
+  describe "#remove_variant!" do
+    it "removes the variant in place and returns self" do
+      locale = ICU4X::Locale.parse("en-US-posix")
+
+      result = locale.remove_variant!("posix")
+
+      expect(result).to be(locale)
+      expect(locale.to_s).to eq("en-US")
+    end
+
+    it "returns nil when variant is not present" do
+      locale = ICU4X::Locale.parse("en-US")
+
+      expect(locale.remove_variant!("posix")).to be_nil
+      expect(locale.to_s).to eq("en-US")
+    end
+
+    it "raises LocaleError for invalid variant" do
+      locale = ICU4X::Locale.parse("en-US")
+
+      expect { locale.remove_variant!("!!!") }.to raise_error(ICU4X::LocaleError, /Invalid variant/)
+    end
+  end
+
+  describe "#remove_variant" do
+    it "returns a new locale with the variant removed" do
+      locale = ICU4X::Locale.parse("en-US-posix")
+
+      result = locale.remove_variant("posix")
+
+      expect(result).not_to be(locale)
+      expect(result.to_s).to eq("en-US")
+      expect(locale.to_s).to eq("en-US-posix")
+    end
+
+    it "returns a new locale even when variant is not present" do
+      locale = ICU4X::Locale.parse("en-US")
+
+      result = locale.remove_variant("posix")
+
+      expect(result).not_to be(locale)
+      expect(result.to_s).to eq("en-US")
+    end
+
+    it "raises LocaleError for invalid variant" do
+      locale = ICU4X::Locale.parse("en-US")
+
+      expect { locale.remove_variant("!!!") }.to raise_error(ICU4X::LocaleError, /Invalid variant/)
+    end
+  end
 end

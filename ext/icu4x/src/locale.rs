@@ -1,5 +1,6 @@
 use crate::helpers;
 use icu_locale::{Locale as IcuLocale, LocaleExpander, TransformResult};
+use icu_locale::subtags::Variant;
 use magnus::{Error, RHash, RModule, Ruby, function, method, prelude::*, typed_data::Obj};
 use std::cell::RefCell;
 
@@ -204,6 +205,57 @@ impl Locale {
             inner: RefCell::new(IcuLocale::from(new_id)),
         }
     }
+
+    /// Get the list of variants
+    fn variants(&self) -> Vec<String> {
+        self.inner
+            .borrow()
+            .id
+            .variants
+            .iter()
+            .map(|v| v.to_string())
+            .collect()
+    }
+
+    fn parse_variant(s: &str) -> Result<Variant, Error> {
+        let ruby = Ruby::get().expect("Ruby runtime should be available");
+        s.parse::<Variant>().map_err(|e| {
+            Error::new(
+                helpers::get_exception_class(&ruby, "ICU4X::LocaleError"),
+                format!("Invalid variant: {e}"),
+            )
+        })
+    }
+
+    /// Add a variant in place; returns self if added, nil if already present
+    fn add_variant_bang(rb_self: Obj<Self>, variant_str: String) -> Result<Option<Obj<Self>>, Error> {
+        let variant = Self::parse_variant(&variant_str)?;
+        let added = rb_self.inner.borrow_mut().id.variants.push(variant);
+        Ok(if added { Some(rb_self) } else { None })
+    }
+
+    /// Return a new Locale with the variant added
+    fn add_variant(&self, variant_str: String) -> Result<Self, Error> {
+        let variant = Self::parse_variant(&variant_str)?;
+        let mut new_locale = self.inner.borrow().clone();
+        new_locale.id.variants.push(variant);
+        Ok(Self { inner: RefCell::new(new_locale) })
+    }
+
+    /// Remove a variant in place; returns self if removed, nil if not present
+    fn remove_variant_bang(rb_self: Obj<Self>, variant_str: String) -> Result<Option<Obj<Self>>, Error> {
+        let variant = Self::parse_variant(&variant_str)?;
+        let removed = rb_self.inner.borrow_mut().id.variants.remove(&variant);
+        Ok(if removed { Some(rb_self) } else { None })
+    }
+
+    /// Return a new Locale with the variant removed
+    fn remove_variant(&self, variant_str: String) -> Result<Self, Error> {
+        let variant = Self::parse_variant(&variant_str)?;
+        let mut new_locale = self.inner.borrow().clone();
+        new_locale.id.variants.remove(&variant);
+        Ok(Self { inner: RefCell::new(new_locale) })
+    }
 }
 
 pub fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
@@ -221,5 +273,10 @@ pub fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
     class.define_method("maximize", method!(Locale::maximize, 0))?;
     class.define_method("minimize!", method!(Locale::minimize_bang, 0))?;
     class.define_method("minimize", method!(Locale::minimize, 0))?;
+    class.define_method("variants", method!(Locale::variants, 0))?;
+    class.define_method("add_variant!", method!(Locale::add_variant_bang, 1))?;
+    class.define_method("add_variant", method!(Locale::add_variant, 1))?;
+    class.define_method("remove_variant!", method!(Locale::remove_variant_bang, 1))?;
+    class.define_method("remove_variant", method!(Locale::remove_variant, 1))?;
     Ok(())
 }
