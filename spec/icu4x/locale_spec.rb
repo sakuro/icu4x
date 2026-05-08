@@ -406,7 +406,7 @@ RSpec.describe ICU4X::Locale do
     it "returns multiple variants in sorted order" do
       locale = ICU4X::Locale.parse("en-macos-posix")
 
-      expect(locale.variants).to eq(["macos", "posix"])
+      expect(locale.variants).to eq(%w[macos posix])
     end
   end
 
