@@ -24,7 +24,7 @@ No locale data is bundled with the gem. Users generate only the data they need, 
 
 ## Requirements
 
-- Ruby 3.2+
+- Ruby 3.3+
 - Rust toolchain (only required when building from source; prebuilt binary gems are available for major platforms)
 
 ## Setup
