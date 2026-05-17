@@ -4,21 +4,20 @@ use crate::parts_collector::{PartsCollector, parts_to_ruby_array};
 use icu::calendar::preferences::CalendarAlgorithm;
 use icu::calendar::{AnyCalendarKind, Date, Gregorian};
 use icu::datetime::fieldsets::enums::{
-    CalendarPeriodFieldSet, CompositeDateTimeFieldSet, DateAndTimeFieldSet, DateFieldSet,
-    TimeFieldSet,
+    CalendarPeriodFieldSet, CompositeDateTimeFieldSet, CompositeFieldSet, DateAndTimeFieldSet,
+    DateFieldSet, TimeFieldSet,
 };
-use icu::datetime::fieldsets::{self};
+use icu::datetime::fieldsets::{self, zone};
 use icu::datetime::options::{Length, TimePrecision, YearStyle as IcuYearStyle};
-use icu::datetime::input::DateTime;
 use icu::datetime::parts as dt_parts;
 use icu::datetime::{DateTimeFormatter, DateTimeFormatterPreferences};
 use icu::locale::preferences::extensions::unicode::keywords::HourCycle as IcuHourCycle;
-use icu::time::Time;
-use icu::time::zone::IanaParser;
+use icu::time::zone::{models, IanaParser, UtcOffset, ZoneNameTimestamp};
+use icu::time::{Time, TimeZone, TimeZoneInfo, ZonedDateTime};
 use icu_provider::buf::AsDeserializingBufferProvider;
 use icu4x_macros::RubySymbol;
 use jiff::Timestamp;
-use jiff::tz::TimeZone;
+use jiff::tz::TimeZone as JiffTimeZone;
 use magnus::{Error, RArray, RHash, RModule, Ruby, TryConvert, Value, function, method, prelude::*};
 use writeable::{Part, Writeable};
 
@@ -276,12 +275,12 @@ fn part_to_symbol_name(part: &Part) -> &'static str {
 /// Ruby wrapper for ICU4X datetime formatters
 #[magnus::wrap(class = "ICU4X::DateTimeFormat", free_immediately, size)]
 pub struct DateTimeFormat {
-    inner: DateTimeFormatter<CompositeDateTimeFieldSet>,
+    inner: DateTimeFormatter<CompositeFieldSet>,
     locale_str: String,
     date_style: Option<DateStyle>,
     time_style: Option<TimeStyle>,
     time_zone: Option<String>,
-    jiff_timezone: Option<TimeZone>,
+    jiff_timezone: Option<JiffTimeZone>,
     calendar: Calendar,
     hour_cycle: Option<HourCycle>,
     hour12: Option<bool>,
@@ -382,7 +381,7 @@ impl DateTimeFormat {
                 ));
             }
             // Then create jiff TimeZone for offset calculation
-            let jiff_tz = TimeZone::get(tz_str).map_err(|e| {
+            let jiff_tz = JiffTimeZone::get(tz_str).map_err(|e| {
                 Error::new(
                     ruby.exception_arg_error(),
                     format!("invalid IANA timezone: {} ({})", tz_str, e),
@@ -421,6 +420,7 @@ impl DateTimeFormat {
         // Create field set based on options
         let field_set = if has_component_options {
             Self::create_field_set_from_components(ruby, &component_options, era)?
+                .to_composite_field_set()
         } else {
             Self::create_field_set_from_style(date_style, time_style, era)
         };
@@ -596,7 +596,7 @@ impl DateTimeFormat {
         date_style: Option<DateStyle>,
         time_style: Option<TimeStyle>,
         era: Option<EraStyle>,
-    ) -> CompositeDateTimeFieldSet {
+    ) -> CompositeFieldSet {
         match (date_style, time_style) {
             (Some(ds), Some(ts)) => {
                 // Both date and time
@@ -607,6 +607,7 @@ impl DateTimeFormat {
                 };
                 let ymdt = if let Some(s) = era { ymdt.with_year_style(s.to_icu_year_style()) } else { ymdt };
                 CompositeDateTimeFieldSet::DateTime(DateAndTimeFieldSet::YMDT(ymdt))
+                    .to_composite_field_set()
             }
             (Some(ds), None) => {
                 // Date only
@@ -616,17 +617,29 @@ impl DateTimeFormat {
                     DateStyle::Short => fieldsets::YMD::short(),
                 };
                 let ymd = if let Some(s) = era { ymd.with_year_style(s.to_icu_year_style()) } else { ymd };
-                CompositeDateTimeFieldSet::Date(DateFieldSet::YMD(ymd))
+                CompositeDateTimeFieldSet::Date(DateFieldSet::YMD(ymd)).to_composite_field_set()
             }
             (None, Some(ts)) => {
-                // Time only
-                let t = match ts {
-                    TimeStyle::Full | TimeStyle::Long => fieldsets::T::long(),
-                    TimeStyle::Medium => fieldsets::T::medium(),
+                // Time only; long/full include timezone per CLDR convention
+                match ts {
+                    TimeStyle::Full => CompositeFieldSet::TimeZone(
+                        fieldsets::T::long().with_zone(zone::SpecificLong).into_enums(),
+                    ),
+                    TimeStyle::Long => CompositeFieldSet::TimeZone(
+                        fieldsets::T::long().with_zone(zone::SpecificShort).into_enums(),
+                    ),
+                    TimeStyle::Medium => {
+                        CompositeDateTimeFieldSet::Time(TimeFieldSet::T(fieldsets::T::medium()))
+                            .to_composite_field_set()
+                    }
                     // short omits seconds to match Intl.DateTimeFormat timeStyle: "short"
-                    TimeStyle::Short => fieldsets::T::short().with_time_precision(TimePrecision::Minute),
-                };
-                CompositeDateTimeFieldSet::Time(TimeFieldSet::T(t))
+                    TimeStyle::Short => {
+                        CompositeDateTimeFieldSet::Time(TimeFieldSet::T(
+                            fieldsets::T::short().with_time_precision(TimePrecision::Minute),
+                        ))
+                        .to_composite_field_set()
+                    }
+                }
             }
             (None, None) => {
                 // Should not happen due to validation
@@ -672,8 +685,12 @@ impl DateTimeFormat {
     /// Prepare a Ruby Time value for formatting.
     ///
     /// Converts objects responding to #to_time, validates the result,
-    /// and converts to ICU4X DateTime.
-    fn prepare_datetime(&self, ruby: &Ruby, time: Value) -> Result<DateTime<Gregorian>, Error> {
+    /// and converts to ICU4X ZonedDateTime.
+    fn prepare_datetime(
+        &self,
+        ruby: &Ruby,
+        time: Value,
+    ) -> Result<ZonedDateTime<Gregorian, TimeZoneInfo<models::AtTime>>, Error> {
         // Convert to Time if the object responds to #to_time
         let time_value = if time.respond_to("to_time", false)? {
             time.funcall::<_, _, Value>("to_time", ())?
@@ -690,68 +707,50 @@ impl DateTimeFormat {
             ));
         }
 
-        self.convert_time_to_datetime(ruby, time_value)
+        self.convert_time_to_zoned_datetime(ruby, time_value)
     }
 
-    /// Convert Ruby Time to ICU4X DateTime<Gregorian>
+    /// Convert Ruby Time to ICU4X ZonedDateTime<Gregorian, TimeZoneInfo<AtTime>>
     ///
-    /// If time_zone is specified, the UTC time is converted to local time in that timezone.
-    /// Otherwise, the time is treated as UTC.
-    fn convert_time_to_datetime(
+    /// If time_zone is specified, the time is represented in that timezone.
+    /// Otherwise, UTC is used.
+    fn convert_time_to_zoned_datetime(
         &self,
         ruby: &Ruby,
         time: Value,
-    ) -> Result<DateTime<Gregorian>, Error> {
-        // Get UTC time from Ruby Time object
-        let utc_time: Value = time.funcall("getutc", ())?;
+    ) -> Result<ZonedDateTime<Gregorian, TimeZoneInfo<models::AtTime>>, Error> {
+        let ts_secs: i64 = time.funcall("to_i", ())?;
 
-        let utc_year: i32 = utc_time.funcall("year", ())?;
-        let utc_month: i32 = utc_time.funcall("month", ())?;
-        let utc_day: i32 = utc_time.funcall("day", ())?;
-        let utc_hour: i32 = utc_time.funcall("hour", ())?;
-        let utc_min: i32 = utc_time.funcall("min", ())?;
-        let utc_sec: i32 = utc_time.funcall("sec", ())?;
+        let timestamp = Timestamp::from_second(ts_secs).map_err(|e| {
+            Error::new(ruby.exception_arg_error(), format!("Invalid timestamp: {}", e))
+        })?;
 
-        // Get year, month, day, hour, min, sec in the target timezone
-        let (year, month, day, hour, min, sec) = if let Some(ref tz) = self.jiff_timezone {
-            // Create a jiff Timestamp from UTC components
-            let timestamp = Timestamp::from_second(utc_time.funcall::<_, _, i64>("to_i", ())?)
-                .map_err(|e| {
-                    Error::new(
-                        ruby.exception_arg_error(),
-                        format!("Invalid timestamp: {}", e),
-                    )
-                })?;
-
-            // Convert to local time in the target timezone
-            let zoned = timestamp.to_zoned(tz.clone());
-            let dt = zoned.datetime();
-
-            (
-                dt.year() as i32,
-                dt.month() as i32,
-                dt.day() as i32,
-                dt.hour() as i32,
-                dt.minute() as i32,
-                dt.second() as i32,
-            )
+        let (jiff_tz, iana_name) = if let Some(ref tz) = self.jiff_timezone {
+            let name = tz.iana_name().unwrap_or("UTC").to_owned();
+            (tz.clone(), name)
         } else {
-            // No timezone specified, use UTC
-            (utc_year, utc_month, utc_day, utc_hour, utc_min, utc_sec)
+            (JiffTimeZone::UTC, "UTC".to_owned())
         };
 
-        // Create ISO date and convert to Gregorian
-        let iso_date = Date::try_new_iso(year, month as u8, day as u8)
+        let zoned = timestamp.to_zoned(jiff_tz);
+        let dt = zoned.datetime();
+
+        let iso_date = Date::try_new_iso(dt.year() as i32, dt.month() as u8, dt.day() as u8)
             .map_err(|e| Error::new(ruby.exception_arg_error(), format!("Invalid date: {}", e)))?;
         let gregorian_date = iso_date.to_calendar(Gregorian);
 
-        // Create time
-        let time_of_day = Time::try_new(hour as u8, min as u8, sec as u8, 0)
+        let icu_time = Time::try_new(dt.hour() as u8, dt.minute() as u8, dt.second() as u8, 0)
             .map_err(|e| Error::new(ruby.exception_arg_error(), format!("Invalid time: {}", e)))?;
 
-        Ok(DateTime {
+        let icu_tz: TimeZone = IanaParser::new().parse(&iana_name);
+        let utc_offset = UtcOffset::from_seconds_unchecked(zoned.offset().seconds());
+        let zone_name_ts = ZoneNameTimestamp::from_epoch_seconds(ts_secs);
+        let zone_info = icu_tz.with_offset(Some(utc_offset)).with_zone_name_timestamp(zone_name_ts);
+
+        Ok(ZonedDateTime {
             date: gregorian_date,
-            time: time_of_day,
+            time: icu_time,
+            zone: zone_info,
         })
     }
 
