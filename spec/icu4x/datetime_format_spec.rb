@@ -307,7 +307,7 @@ RSpec.describe ICU4X::DateTimeFormat do
         result = formatter.format(Time.utc(2025, 12, 28, 14, 30, 0))
 
         # ICU4X uses narrow no-break space (U+202F) before AM/PM
-        expect(result).to eq("2:30:00\u202FPM")
+        expect(result).to eq("2:30\u202FPM")
       end
 
       it "formats date and time with both styles" do
@@ -317,6 +317,34 @@ RSpec.describe ICU4X::DateTimeFormat do
 
         expect(result).to include("December 28, 2025")
         expect(result).to include("2:30:00\u202FPM")
+      end
+    end
+
+    context "with time_style component precision" do
+      let(:locale) { ICU4X::Locale.parse("en-US") }
+      let(:time) { Time.utc(2025, 12, 28, 14, 30, 0) }
+
+      it "formats time with short style without seconds" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :short)
+
+        result = formatter.format(time)
+
+        expect(result).to eq("2:30 PM")
+      end
+
+      it "formats time with medium style with seconds" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :medium)
+
+        result = formatter.format(time)
+
+        expect(result).to eq("2:30:00 PM")
+      end
+
+      it "short and medium styles produce different output" do
+        short_fmt = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :short)
+        medium_fmt = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :medium)
+
+        expect(short_fmt.format(time)).not_to eq(medium_fmt.format(time))
       end
     end
 
@@ -392,7 +420,7 @@ RSpec.describe ICU4X::DateTimeFormat do
 
         result = formatter.format(midnight)
 
-        expect(result).to eq("12:30:00\u202FAM")
+        expect(result).to eq("12:30\u202FAM")
       end
 
       it "formats midnight with h23 as 00:30" do
@@ -400,7 +428,7 @@ RSpec.describe ICU4X::DateTimeFormat do
 
         result = formatter.format(midnight)
 
-        expect(result).to eq("00:30:00")
+        expect(result).to eq("00:30")
       end
 
       it "formats midnight with h11 as 0:30 AM" do
@@ -408,7 +436,7 @@ RSpec.describe ICU4X::DateTimeFormat do
 
         result = formatter.format(midnight)
 
-        expect(result).to eq("0:30:00\u202FAM")
+        expect(result).to eq("0:30\u202FAM")
       end
 
       it "formats noon with h12 as 12:30 PM" do
@@ -416,7 +444,7 @@ RSpec.describe ICU4X::DateTimeFormat do
 
         result = formatter.format(noon)
 
-        expect(result).to eq("12:30:00\u202FPM")
+        expect(result).to eq("12:30\u202FPM")
       end
 
       it "formats noon with h23 as 12:30" do
@@ -424,7 +452,7 @@ RSpec.describe ICU4X::DateTimeFormat do
 
         result = formatter.format(noon)
 
-        expect(result).to eq("12:30:00")
+        expect(result).to eq("12:30")
       end
     end
 
@@ -437,7 +465,7 @@ RSpec.describe ICU4X::DateTimeFormat do
 
         result = formatter.format(afternoon)
 
-        expect(result).to eq("2:30:00\u202FPM")
+        expect(result).to eq("2:30\u202FPM")
       end
 
       it "formats with hour12: false as 24-hour format" do
@@ -445,7 +473,7 @@ RSpec.describe ICU4X::DateTimeFormat do
 
         result = formatter.format(afternoon)
 
-        expect(result).to eq("14:30:00")
+        expect(result).to eq("14:30")
       end
 
       it "hour_cycle takes precedence over hour12" do
@@ -454,7 +482,7 @@ RSpec.describe ICU4X::DateTimeFormat do
         result = formatter.format(afternoon)
 
         # hour_cycle: :h23 should override hour12: true
-        expect(result).to eq("14:30:00")
+        expect(result).to eq("14:30")
       end
     end
 
@@ -467,7 +495,7 @@ RSpec.describe ICU4X::DateTimeFormat do
         # UTC 2025-12-28 00:00 -> Tokyo 2025-12-28 09:00
         result = formatter.format(Time.utc(2025, 12, 28, 0, 0, 0))
 
-        expect(result).to eq("9:00:00\u202FAM")
+        expect(result).to eq("9:00\u202FAM")
       end
 
       it "converts UTC to Asia/Tokyo date when date changes" do
@@ -485,7 +513,7 @@ RSpec.describe ICU4X::DateTimeFormat do
         # UTC 2025-12-28 12:00 -> New York 2025-12-28 07:00 (EST, -5)
         result = formatter.format(Time.utc(2025, 12, 28, 12, 0, 0))
 
-        expect(result).to eq("7:00:00\u202FAM")
+        expect(result).to eq("7:00\u202FAM")
       end
 
       it "formats both date and time with timezone conversion" do

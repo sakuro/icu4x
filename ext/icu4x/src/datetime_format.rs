@@ -8,7 +8,7 @@ use icu::datetime::fieldsets::enums::{
     TimeFieldSet,
 };
 use icu::datetime::fieldsets::{self};
-use icu::datetime::options::{Length, YearStyle as IcuYearStyle};
+use icu::datetime::options::{Length, TimePrecision, YearStyle as IcuYearStyle};
 use icu::datetime::input::DateTime;
 use icu::datetime::parts as dt_parts;
 use icu::datetime::{DateTimeFormatter, DateTimeFormatterPreferences};
@@ -623,7 +623,8 @@ impl DateTimeFormat {
                 let t = match ts {
                     TimeStyle::Full | TimeStyle::Long => fieldsets::T::long(),
                     TimeStyle::Medium => fieldsets::T::medium(),
-                    TimeStyle::Short => fieldsets::T::short(),
+                    // short omits seconds to match Intl.DateTimeFormat timeStyle: "short"
+                    TimeStyle::Short => fieldsets::T::short().with_time_precision(TimePrecision::Minute),
                 };
                 CompositeDateTimeFieldSet::Time(TimeFieldSet::T(t))
             }
