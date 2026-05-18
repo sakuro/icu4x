@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.11.0] - 2026-05-18
+
 ### Fixed
 
 - Fix `time_style: :long` and `time_style: :full` to include timezone information (#156)
