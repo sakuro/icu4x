@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+### Fixed
+
+- Fix `time_style: :long` and `time_style: :full` to include timezone information (#156)
+- Fix `time_style: :short` to omit seconds (#155)
+
+### Changed
+
+- Update minimum Ruby version requirement to 3.3
+
 ## [0.10.0] - 2026-05-08
 
 ### Added
