@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+### Fixed
+
+- Relax `bigdecimal` version requirement from `~> 4.0` to `>= 3.1, < 5` to allow coexistence with gems requiring bigdecimal 3.x (#159)
+
 ## [0.11.0] - 2026-05-18
 
 ### Fixed
