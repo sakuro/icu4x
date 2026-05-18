@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+### Fixed
+
+- Fix `time_style: :short` being ignored when combined with `date_style` (#162)
+
 ## [0.11.1] - 2026-05-18
 
 ### Fixed
