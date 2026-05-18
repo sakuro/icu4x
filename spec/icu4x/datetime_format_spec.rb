@@ -348,6 +348,34 @@ RSpec.describe ICU4X::DateTimeFormat do
       end
     end
 
+    context "with time_style long/full timezone information" do
+      let(:locale) { ICU4X::Locale.parse("en-US") }
+      let(:utc_time) { Time.utc(2025, 1, 4, 14, 30, 0) }
+
+      it "formats time with long style including timezone abbreviation" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :long)
+
+        result = formatter.format(utc_time)
+
+        expect(result).to include("UTC")
+      end
+
+      it "formats time with full style including full timezone name" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :full)
+
+        result = formatter.format(utc_time)
+
+        expect(result).to include("Coordinated Universal Time")
+      end
+
+      it "long and full styles produce different output" do
+        long_fmt = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :long)
+        full_fmt = ICU4X::DateTimeFormat.new(locale, provider:, time_style: :full)
+
+        expect(long_fmt.format(utc_time)).not_to eq(full_fmt.format(utc_time))
+      end
+    end
+
     context "with ja-JP locale" do
       let(:locale) { ICU4X::Locale.parse("ja-JP") }
 
