@@ -599,11 +599,17 @@ impl DateTimeFormat {
     ) -> CompositeFieldSet {
         match (date_style, time_style) {
             (Some(ds), Some(ts)) => {
-                // Both date and time
-                let ymdt = match (ds, ts) {
-                    (DateStyle::Full, _) | (DateStyle::Long, _) => fieldsets::YMDT::long(),
-                    (DateStyle::Medium, _) => fieldsets::YMDT::medium(),
-                    (DateStyle::Short, _) => fieldsets::YMDT::short(),
+                // Both date and time; date_style determines length
+                let ymdt = match ds {
+                    DateStyle::Full | DateStyle::Long => fieldsets::YMDT::long(),
+                    DateStyle::Medium => fieldsets::YMDT::medium(),
+                    DateStyle::Short => fieldsets::YMDT::short(),
+                };
+                // short time_style suppresses seconds to match Intl.DateTimeFormat behavior
+                let ymdt = if ts == TimeStyle::Short {
+                    ymdt.with_time_precision(TimePrecision::Minute)
+                } else {
+                    ymdt
                 };
                 let ymdt = if let Some(s) = era { ymdt.with_year_style(s.to_icu_year_style()) } else { ymdt };
                 CompositeDateTimeFieldSet::DateTime(DateAndTimeFieldSet::YMDT(ymdt))
