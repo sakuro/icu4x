@@ -316,7 +316,26 @@ RSpec.describe ICU4X::DateTimeFormat do
         result = formatter.format(Time.utc(2025, 12, 28, 14, 30, 0))
 
         expect(result).to include("December 28, 2025")
-        expect(result).to include("2:30:00\u202FPM")
+        expect(result).to include("2:30\u202FPM")
+        expect(result).not_to include(":00")
+      end
+
+      it "omits seconds when time_style: :short is combined with date_style: :medium" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :medium, time_style: :short)
+
+        result = formatter.format(Time.utc(2025, 1, 15, 23, 30, 45))
+
+        expect(result).to include("Jan 15, 2025")
+        expect(result).not_to include(":45")
+      end
+
+      it "omits seconds when time_style: :short is combined with date_style and time_zone" do
+        formatter = ICU4X::DateTimeFormat.new(locale, provider:, date_style: :medium, time_style: :short, time_zone: "Asia/Tokyo")
+
+        result = formatter.format(Time.utc(2025, 1, 15, 23, 30, 45))
+
+        expect(result).to include("Jan 16, 2025")
+        expect(result).not_to include(":45")
       end
     end
 
@@ -551,7 +570,8 @@ RSpec.describe ICU4X::DateTimeFormat do
         result = formatter.format(Time.utc(2025, 12, 28, 23, 30, 0))
 
         expect(result).to include("December 29, 2025")
-        expect(result).to include("8:30:00\u202FAM")
+        expect(result).to include("8:30\u202FAM")
+        expect(result).not_to include(":00")
       end
     end
 
